@@ -9,7 +9,7 @@
       </div>
 
       <!-- Simulation Clock Controls & Status -->
-      <div class="header-center">
+      <div class="header-center" v-if="stationStore.hasActiveRun">
         <div class="sim-controls">
           <button class="btn-ctrl" :class="{ active: isPlaying }" @click="togglePlay" title="Play/Pause Simulation">
             {{ isPlaying ? '⏸ Pause' : '▶ Play' }}
@@ -19,8 +19,8 @@
               v-for="s in [1, 2, 10, 60]"
               :key="s"
               class="btn-speed"
-              :class="{ active: currentSpeed === s }"
-              @click="setSpeed(s)"
+              :class="{ active: Math.round(stationStore.simSpeed) === s }"
+              @click="stationStore.setRunSpeed(s)"
             >
               {{ s }}×
             </button>
@@ -32,6 +32,11 @@
           </span>
           <span class="badge-provenance badge-d text-mono">NPT (+05:45)</span>
         </div>
+      </div>
+      <div class="header-center" v-else>
+        <button class="btn-start-replay" @click="startReplay" :disabled="stationStore.isLoading">
+          ▶ Run the 26 August 2026 replay
+        </button>
       </div>
 
       <div class="header-right">
@@ -70,9 +75,10 @@
             {{ incidentHeadline }}
           </h2>
           <p class="incident-sub text-mono">
-            Anchor Gauge: <strong>{{ stationStore.openIncident.anchorStation || 'RSW' }}</strong>
-            · Triggered: {{ stationStore.openIncident.openedAt || '08:53:00 NPT' }}
-            · Rule: R5 Cascade Corroboration
+            Anchor Gauge: <strong>{{ stationStore.openIncident.anchorStation }}</strong>
+            <template v-if="stationStore.openIncident.openedAt">
+              · Triggered: {{ formatTime(stationStore.openIncident.openedAt) }}
+            </template>
           </p>
         </div>
       </div>
@@ -131,7 +137,7 @@
       <AckBoard :incident-id="stationStore.openIncident?.id" />
 
       <!-- Comparative timeline (Section 12 proof point) -->
-      <ComparisonTimeline />
+      <ComparisonTimeline :run-id="stationStore.runId" />
     </main>
 
     <!-- Field-report feed & Gemini integration -->
@@ -141,14 +147,14 @@
 
     <!-- Modals & Copilot Drawer -->
     <WhyModal :isOpen="isWhyOpen" @close="isWhyOpen = false" />
-    <ReplayReportModal :isOpen="isReportOpen" :runId="stationStore.runId" @close="isReportOpen = false" />
-    <LiveInjectionModal :isOpen="isInjectOpen" :runId="stationStore.runId" @close="isInjectOpen = false" @injected="stationStore.fetchCorridorState(stationStore.runId)" />
-    <CopilotChat :isOpen="isCopilotOpen" :runId="stationStore.runId" @close="isCopilotOpen = false" />
+    <ReplayReportModal :isOpen="isReportOpen" :runId="stationStore.runId ?? undefined" @close="isReportOpen = false" />
+    <LiveInjectionModal :isOpen="isInjectOpen" :runId="stationStore.runId ?? undefined" @close="isInjectOpen = false" @injected="refreshCorridorState" />
+    <CopilotChat :isOpen="isCopilotOpen" :runId="stationStore.runId ?? undefined" @close="isCopilotOpen = false" />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed } from 'vue'
 import { useStationStore } from '@/stores/stationStore'
 import { useSSE } from '@/composables/useSSE'
 import StationStrip from '@/components/StationStrip.vue'
@@ -162,39 +168,51 @@ import CopilotChat from '@/components/CopilotChat.vue'
 
 const stationStore = useStationStore()
 const activeTab = ref('bands')
-const isPlaying = ref(true)
-const currentSpeed = ref(2)
-const displaySimTime = ref('08:53:00')
 
 const isWhyOpen = ref(false)
 const isReportOpen = ref(false)
 const isInjectOpen = ref(false)
 const isCopilotOpen = ref(false)
 
-// Connect live SSE stream
+const isPlaying = computed(() => stationStore.simStatus === 'RUNNING')
+const displaySimTime = computed(() => {
+  if (!stationStore.simTime) return '—'
+  try {
+    const d = new Date(stationStore.simTime)
+    const nptDate = new Date(d.getTime() + (5 * 60 + 45) * 60 * 1000)
+    return nptDate.toISOString().substring(11, 19)
+  } catch (e) {
+    return '—'
+  }
+})
+
+// Connect live SSE stream once a run exists; useSSE reconnects automatically if runId changes
 const { isConnected } = useSSE({
-  runId: stationStore.runId,
+  runId: computed(() => stationStore.runId || 'live'),
   onReading: (data) => stationStore.handleReadingEvent(data),
   onStationState: (data) => stationStore.handleStationStateEvent(data),
   onIncident: (data) => stationStore.handleIncidentEvent(data),
-  onBands: (data) => stationStore.handleBandsEvent(data)
+  onBands: (data) => stationStore.handleBandsEvent(data),
+  onClock: (data) => stationStore.handleClockEvent(data)
 })
 
-onMounted(async () => {
-  await stationStore.fetchCorridorState('aug26-run')
+const startReplay = async () => {
+  await stationStore.startRun('aug26-as-happened')
+}
 
-  // Populate sample arrival bands matching 26 Aug calibration if warning is active
-  if (stationStore.arrivalBands.length === 0) {
-    stationStore.arrivalBands = [
-      { siteId: 'BTW-S', siteName: 'Betrawati', riverKm: 38, earliestArrival: '2026-08-26T03:31:00Z', latestArrival: '2026-08-26T03:51:00Z', tag: 'D' },
-      { siteId: 'BID', siteName: 'Trishuli Bazaar / Bidur', riverKm: 55, earliestArrival: '2026-08-26T04:01:00Z', latestArrival: '2026-08-26T04:27:00Z', tag: 'D' },
-      { siteId: 'GLB', siteName: 'Galchhi Bazaar', riverKm: 88, earliestArrival: '2026-08-26T05:00:00Z', latestArrival: '2026-08-26T05:38:00Z', tag: 'D' },
-      { siteId: 'MLB', siteName: 'Malekhu (Furke)', riverKm: 100, earliestArrival: '2026-08-26T05:21:00Z', latestArrival: '2026-08-26T05:54:00Z', tag: 'D' },
-      { siteId: 'MUG', siteName: 'Mugling', riverKm: 132, earliestArrival: '2026-08-26T06:56:00Z', latestArrival: '2026-08-26T07:36:00Z', tag: 'D' },
-      { siteId: 'DVS', siteName: 'Devghat', riverKm: 168, earliestArrival: '2026-08-26T07:41:00Z', latestArrival: '2026-08-26T08:51:00Z', tag: 'A' }
-    ]
+const refreshCorridorState = () => {
+  if (stationStore.runId) {
+    stationStore.fetchCorridorState(stationStore.runId)
   }
-})
+}
+
+const togglePlay = () => {
+  if (isPlaying.value) {
+    stationStore.pauseRun()
+  } else {
+    stationStore.playRun()
+  }
+}
 
 const bannerClass = computed(() => {
   if (stationStore.activeLevel === 'WARNING') return 'banner-warning'
@@ -207,19 +225,12 @@ const incidentLevelLabel = computed(() => {
 })
 
 const incidentHeadline = computed(() => {
+  const anchor = stationStore.openIncident?.anchorStation
   if (stationStore.activeLevel === 'WARNING') {
-    return 'CORRIDOR WARNING: Cascade corroboration between Rasuwagadhi and Syaphrubesi'
+    return anchor ? `CORRIDOR WARNING: Cascade corroboration anchored at ${anchor}` : 'CORRIDOR WARNING'
   }
-  return 'INTERNAL WATCH: Overdue telemetry detected at upstream station'
+  return anchor ? `INTERNAL WATCH: Overdue telemetry at ${anchor}` : 'INTERNAL WATCH'
 })
-
-const togglePlay = () => {
-  isPlaying.value = !isPlaying.value
-}
-
-const setSpeed = (s: number) => {
-  currentSpeed.value = s
-}
 
 const formatTime = (isoString: string) => {
   try {
@@ -330,6 +341,27 @@ const calculateSpan = (earliest: string, latest: string) => {
 
 .btn-ctrl:hover {
   background: #2ea043;
+}
+
+.btn-start-replay {
+  background: #238636;
+  color: #fff;
+  border: none;
+  padding: 8px 18px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-start-replay:hover {
+  background: #2ea043;
+}
+
+.btn-start-replay:disabled {
+  opacity: 0.6;
+  cursor: wait;
 }
 
 .speed-selector {

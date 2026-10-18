@@ -12,6 +12,7 @@ import org.jaldrishti.application.port.out.CorridorConfigRepository;
 import org.jaldrishti.application.port.out.IncidentEventPublisher;
 import org.jaldrishti.application.port.out.IncidentEventRepository;
 import org.jaldrishti.application.port.out.IncidentRepository;
+import org.jaldrishti.application.port.out.LiveTelemetryPublisher;
 import org.jaldrishti.application.port.out.ReadingRepository;
 import org.jaldrishti.application.port.out.StationStateRepository;
 import org.jaldrishti.domain.AlertTag;
@@ -86,6 +87,7 @@ public class TriggerEngine implements
     private final IncidentEventPublisher incidentEventPublisher;
     private final ArrivalTimeCalculator arrivalTimeCalculator;
     private final DispatchIncidentActionsUseCase actionDispatcher;
+    private final LiveTelemetryPublisher liveTelemetryPublisher;
 
     public TriggerEngine(
             Clock clock,
@@ -98,7 +100,7 @@ public class TriggerEngine implements
             ArrivalTimeCalculator arrivalTimeCalculator
     ) {
         this(clock, readingRepository, stationStateRepository, incidentRepository, incidentEventRepository,
-                corridorConfigRepository, incidentEventPublisher, arrivalTimeCalculator, null);
+                corridorConfigRepository, incidentEventPublisher, arrivalTimeCalculator, null, null);
     }
 
     public TriggerEngine(
@@ -112,6 +114,22 @@ public class TriggerEngine implements
             ArrivalTimeCalculator arrivalTimeCalculator,
             DispatchIncidentActionsUseCase actionDispatcher
     ) {
+        this(clock, readingRepository, stationStateRepository, incidentRepository, incidentEventRepository,
+                corridorConfigRepository, incidentEventPublisher, arrivalTimeCalculator, actionDispatcher, null);
+    }
+
+    public TriggerEngine(
+            Clock clock,
+            ReadingRepository readingRepository,
+            StationStateRepository stationStateRepository,
+            IncidentRepository incidentRepository,
+            IncidentEventRepository incidentEventRepository,
+            CorridorConfigRepository corridorConfigRepository,
+            IncidentEventPublisher incidentEventPublisher,
+            ArrivalTimeCalculator arrivalTimeCalculator,
+            DispatchIncidentActionsUseCase actionDispatcher,
+            LiveTelemetryPublisher liveTelemetryPublisher
+    ) {
         this.clock = Objects.requireNonNull(clock, "Clock must not be null");
         this.readingRepository = Objects.requireNonNull(readingRepository, "readingRepository must not be null");
         this.stationStateRepository = Objects.requireNonNull(stationStateRepository, "stationStateRepository must not be null");
@@ -121,6 +139,21 @@ public class TriggerEngine implements
         this.incidentEventPublisher = Objects.requireNonNull(incidentEventPublisher, "incidentEventPublisher must not be null");
         this.arrivalTimeCalculator = arrivalTimeCalculator != null ? arrivalTimeCalculator : ArrivalTimeCalculator.defaultCorridorCurve();
         this.actionDispatcher = actionDispatcher;
+        this.liveTelemetryPublisher = liveTelemetryPublisher;
+    }
+
+    private void publishStationStateUpdate(StationObservationState state) {
+        if (liveTelemetryPublisher == null) {
+            return;
+        }
+        liveTelemetryPublisher.publishStationState(state.runId(), new LiveTelemetryPublisher.StationStateUpdate(
+                state.stationId(),
+                state.effectiveState().name(),
+                state.silent(),
+                state.rateAlert(),
+                state.lastReportedLevel(),
+                state.lastGoodReadingAt()
+        ));
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -202,6 +235,12 @@ public class TriggerEngine implements
                 command.rainMm()
         );
         stationStateRepository.save(newState);
+        publishStationStateUpdate(newState);
+        if (liveTelemetryPublisher != null) {
+            liveTelemetryPublisher.publishReading(command.runId(), new LiveTelemetryPublisher.ReadingUpdate(
+                    command.stationId(), command.observedAt(), command.levelM(), command.rainMm(), command.tag().name()
+            ));
+        }
 
         // Elevate/update incident if rules fired
         if (r6Result != null && r6Result.fired()) {
@@ -264,6 +303,7 @@ public class TriggerEngine implements
                                 current.lastReportedLevel(), current.lastReportedRain()
                         );
                         stationStateRepository.save(outageState);
+                        publishStationStateUpdate(outageState);
                     }
                 }
             } else {
@@ -297,6 +337,7 @@ public class TriggerEngine implements
                         false, null, current.lastReportedLevel(), current.lastReportedRain()
                 );
                 stationStateRepository.save(silentState);
+                publishStationStateUpdate(silentState);
 
                 // Check Rule R10: Heightened watch at top station elevates silence to WARNING directly
                 boolean heightened = corridorConfigRepository.isHeightenedWatchActive(runId, corridorId);
@@ -582,6 +623,10 @@ public class TriggerEngine implements
         );
         incidentEventRepository.append(bandEvent);
         incidentEventPublisher.publish(incident.runId(), bandEvent);
+
+        if (liveTelemetryPublisher != null) {
+            liveTelemetryPublisher.publishArrivalBands(incident.runId(), bands);
+        }
     }
 
     private String formatPayload(String description, Map<String, Object> evidence) {

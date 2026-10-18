@@ -15,12 +15,15 @@ import org.jaldrishti.application.port.out.FieldReportRepository;
 import org.jaldrishti.application.port.out.IncidentEventPublisher;
 import org.jaldrishti.application.port.out.IncidentEventRepository;
 import org.jaldrishti.application.port.out.IncidentRepository;
+import org.jaldrishti.application.port.out.LiveTelemetryPublisher;
 import org.jaldrishti.application.port.out.ReadingRepository;
 import org.jaldrishti.application.port.out.StationStateRepository;
+import org.jaldrishti.application.port.in.ProcessFieldReportUseCase;
 import org.jaldrishti.application.service.ActionDispatcherService;
 import org.jaldrishti.application.service.FieldReportProcessor;
 import org.jaldrishti.application.service.TriggerEngine;
 import org.jaldrishti.domain.ArrivalTimeCalculator;
+import org.jaldrishti.sim.ScenarioRunEngine;
 import org.jaldrishti.sim.SimClock;
 import org.jaldrishti.sim.SimScheduler;
 import org.springframework.beans.factory.annotation.Value;
@@ -130,7 +133,8 @@ public class JalDrishtiWiringConfig {
             CorridorConfigRepository corridorConfigRepository,
             IncidentEventPublisher incidentEventPublisher,
             ArrivalTimeCalculator arrivalTimeCalculator,
-            ActionDispatcherService actionDispatcherService
+            ActionDispatcherService actionDispatcherService,
+            LiveTelemetryPublisher liveTelemetryPublisher
     ) {
         return new TriggerEngine(
                 clock,
@@ -141,7 +145,8 @@ public class JalDrishtiWiringConfig {
                 corridorConfigRepository,
                 incidentEventPublisher,
                 arrivalTimeCalculator,
-                actionDispatcherService
+                actionDispatcherService,
+                liveTelemetryPublisher
         );
     }
 
@@ -185,5 +190,24 @@ public class JalDrishtiWiringConfig {
             ActionDispatcherService actionDispatcherService
     ) {
         return new SimScheduler(simClock, triggerEngine, triggerEngine, actionDispatcherService);
+    }
+
+    @Bean
+    @Profile("sim")
+    public ScenarioRunEngine scenarioRunEngine(
+            SimClock simClock,
+            TriggerEngine triggerEngine,
+            ProcessFieldReportUseCase processFieldReportUseCase,
+            SimScheduler simScheduler,
+            LiveTelemetryPublisher liveTelemetryPublisher
+    ) {
+        return new ScenarioRunEngine(
+                simClock,
+                triggerEngine,
+                processFieldReportUseCase,
+                simScheduler,
+                liveTelemetryPublisher,
+                "bhote-trishuli-narayani"
+        );
     }
 }

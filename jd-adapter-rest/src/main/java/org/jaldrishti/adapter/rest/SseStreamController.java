@@ -1,6 +1,8 @@
 package org.jaldrishti.adapter.rest;
 
 import org.jaldrishti.application.port.out.IncidentEventPublisher;
+import org.jaldrishti.application.port.out.LiveTelemetryPublisher;
+import org.jaldrishti.domain.ArrivalBand;
 import org.jaldrishti.domain.IncidentEvent;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -24,7 +26,7 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 @RestController
 @RequestMapping("/api/v1/stream")
-public class SseStreamController implements IncidentEventPublisher {
+public class SseStreamController implements IncidentEventPublisher, LiveTelemetryPublisher {
 
     private final Map<String, List<SseEmitter>> emittersByRunId = new ConcurrentHashMap<>();
     private final AtomicLong eventSequence = new AtomicLong(1);
@@ -81,6 +83,26 @@ public class SseStreamController implements IncidentEventPublisher {
                 removeEmitter(runId, emitter);
             }
         }
+    }
+
+    @Override
+    public void publishReading(String runId, ReadingUpdate update) {
+        broadcast(runId, "reading", update);
+    }
+
+    @Override
+    public void publishStationState(String runId, StationStateUpdate update) {
+        broadcast(runId, "station-state", update);
+    }
+
+    @Override
+    public void publishClock(String runId, ClockUpdate update) {
+        broadcast(runId, "clock", update);
+    }
+
+    @Override
+    public void publishArrivalBands(String runId, List<ArrivalBand> bands) {
+        broadcast(runId, "bands", bands);
     }
 
     public void broadcast(String runId, String eventName, Object data) {

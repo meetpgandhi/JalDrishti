@@ -71,6 +71,20 @@
     </dependencies>
 
     <build>
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+            </resource>
+            <!-- Packages scenarios/*.yaml onto the classpath so ScenarioRunEngine can load them
+                 both from an IDE/mvn run and from the packaged jar in the Cloud Run container. -->
+            <resource>
+                <directory>${project.basedir}/../scenarios</directory>
+                <targetPath>scenarios</targetPath>
+                <excludes>
+                    <exclude>golden/**</exclude>
+                </excludes>
+            </resource>
+        </resources>
         <plugins>
             <plugin>
                 <groupId>org.springframework.boot</groupId>

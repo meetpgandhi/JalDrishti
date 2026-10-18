@@ -311,3 +311,37 @@
 - Offline hydrological engine in `IncidentAssistantController` ensures high availability during internet outages or before Cloud credentials are configured.
 - Live scenario injections endpoint (`/inject`) supports both sensor telemetry attacks and forecaster heightened watch controls for demo simulations.
 
+---
+
+## Session: Hardening pass — the demo was faking it (2026-10-18)
+
+**Trigger:** An AI Builder Cup readiness review (judges' view) found that despite Sprints 0–3 being marked COMPLETE above, the console hard-coded its headline numbers and nothing actually ran end-to-end. This session verified that claim against the real code and fixed the root causes rather than the symptoms.
+
+### Confirmed broken on inspection
+- `POST /api/v1/sim/runs` only wrote an in-memory placeholder; it never loaded a scenario, fed a reading, or advanced `SimClock`. `SimScheduler.tick()` was never called by anything.
+- `ConsoleView.vue` hard-coded `displaySimTime = ref('08:53:00')` and a `'08:53:00 NPT'` fallback; `ComparisonTimeline.vue` was 100% static markup ("08:53", "22 MINUTES SAVED"); `stationStore.ts` fabricated six station tiles with invented levels whenever the corridor-state fetch failed or returned empty.
+- `TriggerEngine#computeAndPublishArrivalBands` published only `{"bandsCount": N}` over SSE, never the actual `ArrivalBand` list — so the console's arrival-bands table had no real data source even when a warning fired, which is *why* it had been hard-coded.
+- `IncidentActionController#getEventExplanation` ("Why did this fire?") ignored its `id`/`seq` path variables entirely and always returned the same canned R5 narrative with a hard-coded "08:53:00 NPT".
+- `application.yml` bound Gemini's enable flag to `${VERTEX_ENABLED:false}` while `cloudbuild.yaml` set `JALDRISHTI_GEMINI_VERTEX_ENABLED=true` — different variable names, so Gemini would never actually turn on in the deployed container.
+- `google-genai` was pinned to `0.1.1`; Maven Central's current release is `1.78.0`.
+- (Pre-existing, unrelated to the above) `ArrivalTimeCalculatorTest.galchhiArrivalBand`/`.malekhuArrivalBand` fail against the calibration table documented in the test's own comments — not touched, needs the calibration spec to fix correctly.
+
+### Fixed this session
+- New `ManageSimulationUseCase` port + `ScenarioRunEngine` (jd-sim): loads the real scenario YAML, builds a full per-station schedule (generator model + `[P]` pinned overrides + outage windows + `${variants.x}`/`enabledWhen` resolution), and replays it through the real `IngestReadingUseCase`/`ProcessFieldReportUseCase` ports as `SimClock` advances, honoring the scenario's own `speedProfile`. `scenarios/*.yaml` is now packaged onto the `jd-boot` classpath (Maven resources plugin) and copied into the Docker build context.
+- New `SimTickScheduler` (`@Scheduled(fixedRate=500)`, sim profile) actually drives the simulation; `SimRunController` delegates to the engine instead of a dummy map.
+- New `LiveTelemetryPublisher` port (reading / station-state / clock / arrival-bands), implemented by `SseStreamController`. `TriggerEngine` now publishes real station-state transitions (including going SILENT) and the real computed `ArrivalBand` list.
+- `stationStore.ts`: removed all fabricated fallback data; incident level is now re-fetched from `/state` on change instead of guessed from the SSE event type.
+- `ComparisonTimeline.vue`: fully rewritten to be data-driven from two new/fixed endpoints — `GET /api/v1/sim/runs/{runId}/timeline` (resolved `asHappened` marks) and `GET /api/v1/incidents/events?runId=` (new, returns the real `incident_event` stream). "Minutes saved" is computed from real timestamps, hidden until both sides have data.
+- `ConsoleView.vue`: removed the hard-coded clock/fallback text; added a real "Run the 26 August 2026 replay" action, wired play/pause/speed buttons to the backend, made `useSSE` reactively follow the active `runId` (it previously connected once at mount and never reconnected after a run started).
+- `IncidentActionController`'s `/why` endpoints rewritten to build the explanation from the real persisted `IncidentEvent` (ruleId/at/description/evidence), not a canned string.
+- Fixed the `VERTEX_ENABLED` → `JALDRISHTI_GEMINI_VERTEX_ENABLED` env var mismatch. Bumped `google-genai` to `1.78.0` (verified: recompiles clean, all tests green, no source changes needed).
+- New test: `ScenarioRunEngineTest` (jd-sim) — deterministic clock-stepping test that reproduces the exact R5 worked example from `docs/HANDOFF.md` §6 directly from the real `aug26-as-happened.yaml`, plus speed-band and scenario-event replay coverage.
+
+### Verified this session
+- Installed a local JDK 21 + Maven (none were present in the sandbox) to actually compile and run the suite rather than assume it from the docs. `mvn compile` across all 11 modules: clean. Full test suite (`jd-domain`, `jd-application`, `jd-sim`, `jd-adapter-rest`, `jd-adapter-cap`, `jd-adapter-gemini`, `jd-boot`) green except the pre-existing, unrelated `ArrivalTimeCalculatorTest` failures noted above. `vue-tsc --noEmit` and `npm run build` for the console: clean.
+
+### NOT done this session (deferred — see the original brief's Tier 2/3 and `docs/PROGRESS.md` Known Issues #11–13)
+- No live click-through verification (no Docker/Postgres in this sandbox) — the end-to-end flow needs to be exercised against a real running server before the demo.
+- No GCP/Vertex AI credentials available — Gemini enablement and `gemini-3.6-flash`/`asia-south1` model availability are unverified live.
+- Full visual redesign ("calm control-room instrument" design system, river schematic, phone page redesign), the Incident Commander agent, multimodal (voice/photo) evidence, Duty Matrix Studio (PDF → cited rules), Gemini Live conversational escalation, the AI activity drawer, and the actual Cloud Run deployment were **not** attempted — all are substantial standalone features/actions out of scope for this pass.
+

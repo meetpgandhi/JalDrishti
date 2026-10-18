@@ -20,7 +20,7 @@
         
         <!-- Dependency Versions -->
         <spring-boot.version>3.4.3</spring-boot.version>
-        <google-genai.version>0.1.1</google-genai.version>
+        <google-genai.version>1.78.0</google-genai.version>
         <google-pubsub.version>1.134.0</google-pubsub.version>
         <jooq.version>3.19.16</jooq.version>
         <flyway.version>10.21.0</flyway.version>

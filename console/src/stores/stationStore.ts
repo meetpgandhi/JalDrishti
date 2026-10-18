@@ -34,45 +34,115 @@ export interface ArrivalBandItem {
   tag: 'P' | 'D' | 'A'
 }
 
+export interface SimRunSnapshot {
+  runId: string
+  scenario: string
+  status: string
+  speed: number
+  simTime: string
+  startTime: string
+  endTime: string
+}
+
 export const useStationStore = defineStore('station', () => {
   const corridorId = ref('bhote-trishuli-narayani')
-  const runId = ref('live')
+  const runId = ref<string | null>(null)
   const stations = ref<StationTile[]>([])
   const openIncident = ref<IncidentState | null>(null)
   const arrivalBands = ref<ArrivalBandItem[]>([])
-  const simTime = ref<string>('08:00:00')
+  const simTime = ref<string | null>(null)
   const simSpeed = ref<number>(1)
-  const isSimRunning = ref<boolean>(false)
-  const isLoading = ref<boolean>(false)
+  const simStatus = ref<string | null>(null)
+  const simScenario = ref<string | null>(null)
+  const isLoading = ref(false)
+  const loadError = ref<string | null>(null)
 
   const activeLevel = computed(() => openIncident.value?.level || 'NORMAL')
+  const hasActiveRun = computed(() => !!runId.value)
 
-  const fetchCorridorState = async (selectedRunId = 'live') => {
+  const fetchCorridorState = async (selectedRunId: string) => {
     isLoading.value = true
+    loadError.value = null
     runId.value = selectedRunId
     try {
       const res = await fetch(`/api/v1/corridors/${corridorId.value}/state?runId=${encodeURIComponent(selectedRunId)}`)
-      if (res.ok) {
-        const data = await res.json()
-        stations.value = data.stations || []
-        openIncident.value = data.openIncident || null
+      if (!res.ok) {
+        throw new Error(`Corridor state request failed: ${res.status}`)
       }
+      const data = await res.json()
+      stations.value = data.stations || []
+      openIncident.value = data.openIncident
+        ? {
+            id: data.openIncident.id,
+            level: data.openIncident.level,
+            anchorStation: data.openIncident.anchorStation,
+            openedAt: data.openIncident.openedAt,
+            nonRain: data.openIncident.nonRain
+          }
+        : null
     } catch (e) {
-      console.warn('Failed to load initial corridor state; running with local simulation defaults', e)
-      // Provide default corridor gauge tiles if backend is loading
-      if (stations.value.length === 0) {
-        stations.value = [
-          { stationId: 'RSW', name: 'Rasuwagadhi', river: 'Bhote Koshi', riverKm: 0, warningM: 6.0, dangerM: null, state: 'OK', silent: false, rateAlert: false, lastLevelM: 1.62, tag: 'P' },
-          { stationId: 'SYP', name: 'Syaphrubesi', river: 'Bhote Koshi', riverKm: 15, warningM: 5.5, dangerM: null, state: 'OK', silent: false, rateAlert: false, lastLevelM: 3.80, tag: 'P' },
-          { stationId: 'BTW', name: 'Betrawati', river: 'Trishuli', riverKm: 38, warningM: 4.1, dangerM: null, state: 'OK', silent: false, rateAlert: false, lastLevelM: 3.55, tag: 'P' },
-          { stationId: 'GLC', name: 'Galchhi', river: 'Trishuli', riverKm: 88, warningM: null, dangerM: null, state: 'OK', silent: false, rateAlert: false, lastLevelM: 5.00, tag: 'A' },
-          { stationId: 'MLK', name: 'Malekhu', river: 'Trishuli', riverKm: 100, warningM: null, dangerM: null, state: 'OK', silent: false, rateAlert: false, lastLevelM: 4.00, tag: 'P' },
-          { stationId: 'DVG', name: 'Devghat', river: 'Narayani', riverKm: 168, warningM: 7.3, dangerM: 9.0, state: 'OK', silent: false, rateAlert: false, lastLevelM: 4.60, tag: 'P' }
-        ]
-      }
+      // No fabricated fallback data: an empty, clearly-labelled state is preferable
+      // to numbers a judge could mistake for something the system actually computed.
+      loadError.value = e instanceof Error ? e.message : String(e)
+      stations.value = []
+      openIncident.value = null
     } finally {
       isLoading.value = false
     }
+  }
+
+  const startRun = async (scenario: string, variants?: Record<string, unknown>) => {
+    isLoading.value = true
+    loadError.value = null
+    try {
+      const res = await fetch('/api/v1/sim/runs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ scenario, variants: variants || null })
+      })
+      if (!res.ok) {
+        throw new Error(`Failed to start run: ${res.status}`)
+      }
+      const snapshot: SimRunSnapshot = await res.json()
+      applySnapshot(snapshot)
+      await fetchCorridorState(snapshot.runId)
+      return snapshot
+    } catch (e) {
+      loadError.value = e instanceof Error ? e.message : String(e)
+      return null
+    } finally {
+      isLoading.value = false
+    }
+  }
+
+  const applySnapshot = (snapshot: SimRunSnapshot) => {
+    runId.value = snapshot.runId
+    simScenario.value = snapshot.scenario
+    simStatus.value = snapshot.status
+    simSpeed.value = snapshot.speed
+    simTime.value = snapshot.simTime
+  }
+
+  const playRun = async () => {
+    if (!runId.value) return
+    const res = await fetch(`/api/v1/sim/runs/${encodeURIComponent(runId.value)}/play`, { method: 'POST' })
+    if (res.ok) applySnapshot(await res.json())
+  }
+
+  const pauseRun = async () => {
+    if (!runId.value) return
+    const res = await fetch(`/api/v1/sim/runs/${encodeURIComponent(runId.value)}/pause`, { method: 'POST' })
+    if (res.ok) applySnapshot(await res.json())
+  }
+
+  const setRunSpeed = async (speed: number) => {
+    if (!runId.value) return
+    const res = await fetch(`/api/v1/sim/runs/${encodeURIComponent(runId.value)}/speed`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ speed })
+    })
+    if (res.ok) applySnapshot(await res.json())
   }
 
   const handleReadingEvent = (reading: any) => {
@@ -80,30 +150,37 @@ export const useStationStore = defineStore('station', () => {
     if (idx !== -1) {
       stations.value[idx].lastLevelM = reading.levelM
       stations.value[idx].lastObservedAt = reading.observedAt
-      stations.value[idx].silent = false
     }
   }
 
   const handleStationStateEvent = (stateEv: any) => {
     const idx = stations.value.findIndex(s => s.stationId === stateEv.stationId)
     if (idx !== -1) {
-      stations.value[idx].state = stateEv.effectiveState || stateEv.band
+      stations.value[idx].state = stateEv.state
       stations.value[idx].silent = !!stateEv.silent
       stations.value[idx].rateAlert = !!stateEv.rateAlert
+      if (stateEv.lastLevelM != null) stations.value[idx].lastLevelM = stateEv.lastLevelM
+      if (stateEv.lastObservedAt) stations.value[idx].lastObservedAt = stateEv.lastObservedAt
     }
   }
 
+  const handleClockEvent = (clockEv: any) => {
+    if (clockEv.simTime) simTime.value = clockEv.simTime
+    if (clockEv.speed != null) simSpeed.value = clockEv.speed
+    if (clockEv.status) simStatus.value = clockEv.status
+    if (clockEv.scenario) simScenario.value = clockEv.scenario
+  }
+
+  // Incident events carry only the rule/description payload, not the resulting level —
+  // re-fetching corridor state keeps the displayed level authoritative instead of guessed
+  // client-side from the event type.
   const handleIncidentEvent = (incEv: any) => {
+    if (!runId.value) return
     if (incEv.type === 'STOOD_DOWN') {
       openIncident.value = null
-    } else {
-      openIncident.value = {
-        id: incEv.incidentId,
-        level: incEv.type === 'LEVEL_CHANGED' ? 'WARNING' : 'WATCH',
-        anchorStation: incEv.anchorStation,
-        openedAt: incEv.at
-      }
+      return
     }
+    fetchCorridorState(runId.value)
   }
 
   const handleBandsEvent = (bandsEv: any) => {
@@ -120,13 +197,21 @@ export const useStationStore = defineStore('station', () => {
     arrivalBands,
     simTime,
     simSpeed,
-    isSimRunning,
+    simStatus,
+    simScenario,
     isLoading,
+    loadError,
     activeLevel,
+    hasActiveRun,
     fetchCorridorState,
+    startRun,
+    playRun,
+    pauseRun,
+    setRunSpeed,
     handleReadingEvent,
     handleStationStateEvent,
     handleIncidentEvent,
-    handleBandsEvent
+    handleBandsEvent,
+    handleClockEvent
   }
 })

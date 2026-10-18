@@ -211,3 +211,48 @@ All ack links are signed with a per-recipient HMAC using a key from Secret Manag
 - (+) No login required for duty-holders (usable on any phone)
 - (+) Links expire automatically — no replay attack after 24h
 - (-) If a duty-holder's phone is off for >24h, they receive a new message via escalation anyway (Step 2 = deputy)
+
+---
+
+## ADR-011: ScenarioRunEngine Drives the Simulation Automatically (No Manual Injection Required)
+
+**Date:** 2026-10-18  
+**Status:** ACCEPTED  
+
+**Context:**  
+Prior to this decision, `POST /api/v1/sim/runs` created only an in-memory placeholder record; nothing ever loaded the scenario YAML, fed readings, or advanced `SimClock`. `SimScheduler.tick()` existed but was never called by anything. As a result the console could not show a real end-to-end run — `ConsoleView.vue` and `ComparisonTimeline.vue` had hard-coded "08:53" / "22 MINUTES SAVED" values standing in for a run that never actually happened, and `CorridorStateController`'s `/state` endpoint never received real station-state updates for a page reload (the live "bands" SSE event also never carried its payload — `computeAndPublishArrivalBands` published only a count, not the real `ArrivalBand` list).
+
+**Decision:**  
+- New inbound port `ManageSimulationUseCase` (jd-application) with `start/play/pause/setSpeed/snapshot/getAsHappenedTimeline`.
+- New `ScenarioRunEngine` (jd-sim) implements it: loads a scenario YAML (classpath first via a `jd-boot` resources-plugin copy of `scenarios/`, falling back to the filesystem for local/test runs), precomputes a full per-station reading/event schedule (generator model + pinned `[P]` overrides + outage windows, with `${variants.x}` substitution and `enabledWhen` gating), and replays it through the *real* `IngestReadingUseCase` / `ProcessFieldReportUseCase` ports as the shared `SimClock` advances. The scenario's own `speedProfile` bands are applied automatically.
+- New `SimTickScheduler` (`@Scheduled(fixedRate = 500)`, sim profile only) ticks the engine; `SimRunController` now delegates entirely to `ManageSimulationUseCase` instead of holding its own state map.
+- New outbound port `LiveTelemetryPublisher` (reading / station-state / clock / arrival-bands) separate from the append-only `IncidentEventPublisher`, implemented by `SseStreamController`. `TriggerEngine` now publishes real station-state transitions (including the SILENT transition) and the real `ArrivalBand` list, not just a count.
+- `console/src/stores/stationStore.ts` no longer fabricates fallback station tiles on fetch failure, and no longer guesses the incident level from the SSE event type — it re-fetches `/state` on any incident change instead.
+- `ComparisonTimeline.vue` is now fully data-driven from `GET /api/v1/sim/runs/{runId}/timeline` (resolved `asHappened` marks) and `GET /api/v1/incidents/events?runId=` (the real `incident_event` stream); "minutes saved" is computed from real timestamps and hidden until both sides have data.
+- `IncidentActionController`'s `/why` endpoints were also fabricated (a hard-coded "08:53:00 NPT" / canned R5 narrative regardless of the actual incident/seq requested) — rewritten to build the explanation from the real persisted `IncidentEvent`'s `ruleId`/`at`/`description`/`evidence`.
+
+**Consequences:**
+- (+) "Open the console → click Run the 26 Aug replay → watch gauges go silent → WARNING fires" is now a real, verifiable pipeline, not a scripted animation.
+- (+) A unit test (`ScenarioRunEngineTest`, deterministic clock stepping, no wall-clock dependency) reproduces the exact R5 worked example from `docs/HANDOFF.md` §6 directly from the scenario YAML.
+- (-) There is still exactly one `SimClock`/one active run per running instance (matches the existing architecture, which already had a single global `SimClock` bean) — concurrent multi-run demos are not supported.
+- (-) Arrival bands are not persisted; a page reload after a run has already fired WARNING will show an empty arrival-bands table until the next `BANDS_UPDATED` event. Full fix requires a persisted `ArrivalBandRepository`, deferred.
+- (-) Not yet verified against a live Postgres instance in this environment (no Docker available); verified via unit/integration tests and `vue-tsc`/`vite build` only. **Must be click-tested against a real deployment before the demo.**
+
+---
+
+## ADR-012: Gemini Vertex Flag Env Var Mismatch Fixed; `google-genai` SDK Bumped 0.1.1 → 1.78.0
+
+**Date:** 2026-10-18  
+**Status:** ACCEPTED  
+
+**Context:**  
+`cloudbuild.yaml` set `JALDRISHTI_GEMINI_VERTEX_ENABLED=true`, but `application.yml` bound the property to `${VERTEX_ENABLED:false}` — a different environment variable name. Gemini would have stayed disabled on Cloud Run regardless of the deployment config. Separately, `google-genai` was pinned to `0.1.1` (the second release ever published), while Maven Central's `maven-metadata.xml` shows the current release is `1.78.0` (as of 2026-10-15).
+
+**Decision:**  
+- `application.yml`: `vertex-enabled: ${JALDRISHTI_GEMINI_VERTEX_ENABLED:false}` (now matches `cloudbuild.yaml`).
+- Root `pom.xml`: `google-genai.version` bumped to `1.78.0`. Verified by recompiling `jd-adapter-gemini` and `jd-adapter-rest` (the only consumers — `Client`, `GenerateContentConfig`, `GenerateContentResponse`) and rerunning their test suites; no source changes were needed.
+
+**Consequences:**
+- (+) Setting `JALDRISHTI_GEMINI_VERTEX_ENABLED=true` in the Cloud Run env now actually takes effect.
+- (+) SDK is current as of this session; future bumps should re-check `https://repo1.maven.org/maven2/com/google/genai/google-genai/maven-metadata.xml`.
+- (-) `gemini-3.6-flash` availability in `asia-south1` (or a fallback region/`global` endpoint) was **not** verified against the live Vertex AI Model Garden in this session — no GCP credentials were available. This remains an open item before the real demo (see `docs/PROGRESS.md` Known Issues).

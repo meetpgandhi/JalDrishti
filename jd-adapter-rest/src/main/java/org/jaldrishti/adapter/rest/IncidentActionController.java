@@ -1,11 +1,17 @@
 package org.jaldrishti.adapter.rest;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.jaldrishti.application.port.in.FieldReportCommand;
 import org.jaldrishti.application.port.in.ForecasterActionUseCase;
 import org.jaldrishti.application.port.in.ProcessFieldReportUseCase;
 import org.jaldrishti.application.port.out.DispatchedActionRepository;
+import org.jaldrishti.application.port.out.IncidentRepository;
+import org.jaldrishti.domain.AlertTag;
 import org.jaldrishti.domain.DispatchedAction;
 import org.jaldrishti.domain.FieldReportRecord;
+import org.jaldrishti.domain.Incident;
+import org.jaldrishti.domain.IncidentEvent;
+import org.jaldrishti.domain.IncidentWhyExplanation;
 import org.jaldrishti.domain.SenderTrust;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -17,8 +23,12 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.Instant;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -28,54 +38,99 @@ import java.util.UUID;
 @RequestMapping("/api/v1")
 public class IncidentActionController {
 
+    private static final DateTimeFormatter NPT_TIME = DateTimeFormatter.ofPattern("HH:mm:ss")
+            .withZone(ZoneOffset.ofHoursMinutes(5, 45));
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+
     private final DispatchedActionRepository dispatchedActionRepository;
     private final ForecasterActionUseCase forecasterActionUseCase;
     private final ProcessFieldReportUseCase processFieldReportUseCase;
     private final org.jaldrishti.application.port.out.IncidentEventRepository incidentEventRepository;
+    private final IncidentRepository incidentRepository;
 
     public IncidentActionController(
             DispatchedActionRepository dispatchedActionRepository,
             ForecasterActionUseCase forecasterActionUseCase,
             ProcessFieldReportUseCase processFieldReportUseCase,
-            org.jaldrishti.application.port.out.IncidentEventRepository incidentEventRepository
+            org.jaldrishti.application.port.out.IncidentEventRepository incidentEventRepository,
+            IncidentRepository incidentRepository
     ) {
         this.dispatchedActionRepository = dispatchedActionRepository;
         this.forecasterActionUseCase = forecasterActionUseCase;
         this.processFieldReportUseCase = processFieldReportUseCase;
         this.incidentEventRepository = incidentEventRepository;
+        this.incidentRepository = incidentRepository;
+    }
+
+    /** Events for the run's comparison timeline and other read-only consumers of the real event stream. */
+    @GetMapping("/incidents/events")
+    public ResponseEntity<List<IncidentEvent>> getEventsForRun(@RequestParam String runId) {
+        List<IncidentEvent> events = new java.util.ArrayList<>(incidentEventRepository.findByRunId(runId));
+        events.sort(Comparator.comparing(IncidentEvent::at));
+        return ResponseEntity.ok(events);
     }
 
     @GetMapping("/incidents/{id}/why")
-    public ResponseEntity<org.jaldrishti.domain.IncidentWhyExplanation> getIncidentExplanation(@PathVariable UUID id) {
-        return getEventExplanation(id, 1L);
+    public ResponseEntity<IncidentWhyExplanation> getIncidentExplanation(@PathVariable UUID id) {
+        List<IncidentEvent> events = incidentEventRepository.findByIncident(id);
+        Optional<IncidentEvent> latest = events.stream().max(Comparator.comparing(IncidentEvent::at));
+        if (latest.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+        return buildExplanation(id, latest.get());
     }
 
     @GetMapping("/incidents/{id}/events/{seq}/why")
-    public ResponseEntity<org.jaldrishti.domain.IncidentWhyExplanation> getEventExplanation(
+    public ResponseEntity<IncidentWhyExplanation> getEventExplanation(
             @PathVariable UUID id,
             @PathVariable Long seq
     ) {
-        org.jaldrishti.domain.IncidentWhyExplanation explanation = new org.jaldrishti.domain.IncidentWhyExplanation(
-                id,
-                seq,
-                Instant.now(),
-                "08:53:00 NPT",
-                "R5",
-                "Silent Station Cascade Corroboration (Physical Order-Consistency)",
-                "Upstream gauge Rasuwagadhi (RSW) went silent at 08:40 NPT. Downstream gauge Syaphrubesi (SYP, distance 15.0 km) went silent at 08:50 NPT. Based on physical wave speed bounds [v_min = 3.0 m/s, v_max = 35.0 m/s], the physical arrival window at SYP is [08:47:08, 10:13:20 NPT]. Station loss at 08:50 falls squarely within this physical window. Rule R5 fired corridor WARNING 22 minutes ahead of telephone reporting.",
-                Map.of(
-                        "anchorStation", "RSW",
-                        "downstreamStation", "SYP",
-                        "corridorDistanceKm", 15.0,
-                        "vMinMps", 3.0,
-                        "vMaxMps", 35.0,
-                        "tEarliestNpt", "08:47:08 NPT",
-                        "tLatestNpt", "10:13:20 NPT",
-                        "formula", "t_earliest = t_lastGood + D/v_max; t_latest = t_firstMissed + D/v_min",
-                        "provenance", "Derived [D] from published 26 Aug wave speed calibration"
-                ),
-                org.jaldrishti.domain.AlertTag.D,
-                1
+        Optional<IncidentEvent> event = incidentEventRepository.findByIncident(id).stream()
+                .filter(e -> seq.equals(e.seq()))
+                .findFirst();
+        if (event.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+        return buildExplanation(id, event.get());
+    }
+
+    /**
+     * Builds the explainability record directly from the actual persisted {@link IncidentEvent}:
+     * its rule id, timestamp, and the description/evidence this rule itself recorded when it fired
+     * (see {@code TriggerEngine#formatPayload}). Nothing here is templated per rule — whatever the
+     * rule put in the event is what is shown.
+     */
+    private ResponseEntity<IncidentWhyExplanation> buildExplanation(UUID incidentId, IncidentEvent event) {
+        String description = event.ruleId() != null ? "Rule " + event.ruleId() + " fired" : "Automated rule evaluation";
+        Map<String, Object> evidence = Map.of();
+        try {
+            Map<?, ?> parsed = OBJECT_MAPPER.readValue(event.payloadJson(), Map.class);
+            if (parsed.get("description") != null) {
+                description = String.valueOf(parsed.get("description"));
+            }
+            if (parsed.get("evidence") instanceof Map<?, ?> evidenceMap) {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> cast = (Map<String, Object>) evidenceMap;
+                evidence = cast;
+            }
+        } catch (Exception ignored) {
+            // Older/other event types may not carry a JSON payload shaped this way; fall back
+            // to the bare rule-fired description above rather than fabricating evidence.
+        }
+
+        int configVersion = incidentRepository.findById(incidentId).map(Incident::configVersion).orElse(0);
+
+        IncidentWhyExplanation explanation = new IncidentWhyExplanation(
+                incidentId,
+                event.seq() != null ? event.seq() : 0L,
+                event.at(),
+                NPT_TIME.format(event.at()) + " NPT",
+                event.ruleId(),
+                event.type().name(),
+                description,
+                evidence,
+                event.tag() != null ? event.tag() : AlertTag.D,
+                configVersion
         );
         return ResponseEntity.ok(explanation);
     }

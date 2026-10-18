@@ -1,5 +1,6 @@
 package org.jaldrishti.adapter.rest;
 
+import org.jaldrishti.application.port.in.ManageSimulationUseCase;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -10,19 +11,24 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.time.Clock;
 import java.time.Instant;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * REST controller for controlling simulation runs, playback, clock speeds, and live injections.
+ *
+ * <p>Delegates all run lifecycle (start/play/pause/speed/clock) to {@link ManageSimulationUseCase},
+ * whose implementation ({@code ScenarioRunEngine} in {@code jd-sim}) actually loads the scenario,
+ * drives the sim clock, and replays readings/reports through the real ingestion ports as sim time
+ * advances. This controller holds no simulation state of its own.
  */
 @RestController
 @RequestMapping("/api/v1/sim/runs")
 public class SimRunController {
 
     private final Clock clock;
-    private final Map<String, SimRunState> runs = new ConcurrentHashMap<>();
+    private final ManageSimulationUseCase manageSimulationUseCase;
 
     public record StartRunRequest(
             String scenario,
@@ -30,22 +36,7 @@ public class SimRunController {
             Long seed
     ) {}
 
-    public record StartRunResponse(
-            String runId,
-            String scenario,
-            String state,
-            Instant startTime
-    ) {}
-
     public record SpeedRequest(double speed) {}
-
-    public record SimRunState(
-            String runId,
-            String scenario,
-            String status,
-            double speed,
-            Instant simTime
-    ) {}
 
     private final org.jaldrishti.application.port.in.GenerateReplayReportUseCase replayReportUseCase;
     private final org.jaldrishti.application.port.in.IngestReadingUseCase readingUseCase;
@@ -72,12 +63,14 @@ public class SimRunController {
 
     public SimRunController(
             Clock clock,
+            ManageSimulationUseCase manageSimulationUseCase,
             org.jaldrishti.application.port.in.GenerateReplayReportUseCase replayReportUseCase,
             org.jaldrishti.application.port.in.IngestReadingUseCase readingUseCase,
             org.jaldrishti.application.port.in.ProcessFieldReportUseCase reportUseCase,
             org.jaldrishti.application.port.in.ForecasterActionUseCase forecasterActionUseCase
     ) {
         this.clock = clock;
+        this.manageSimulationUseCase = manageSimulationUseCase;
         this.replayReportUseCase = replayReportUseCase;
         this.readingUseCase = readingUseCase;
         this.reportUseCase = reportUseCase;
@@ -162,8 +155,8 @@ public class SimRunController {
 
     @GetMapping("/{runId}/report")
     public ResponseEntity<org.jaldrishti.domain.ReplayReport> getReplayReport(@PathVariable("runId") String runId) {
-        SimRunState state = runs.get(runId);
-        String scenario = state != null ? state.scenario() : "aug26-as-happened";
+        ManageSimulationUseCase.RunSnapshot snapshot = manageSimulationUseCase.snapshot(runId);
+        String scenario = snapshot != null ? snapshot.scenario() : "aug26-as-happened";
         if (replayReportUseCase != null) {
             return ResponseEntity.ok(replayReportUseCase.generateReport(runId, scenario));
         }
@@ -171,60 +164,44 @@ public class SimRunController {
     }
 
     @PostMapping
-    public ResponseEntity<StartRunResponse> startRun(@RequestBody StartRunRequest request) {
+    public ResponseEntity<ManageSimulationUseCase.RunSnapshot> startRun(@RequestBody StartRunRequest request) {
         String runId = UUID.randomUUID().toString();
         String scenario = request.scenario() != null ? request.scenario() : "aug26-as-happened";
-        Instant now = clock.instant();
-
-        SimRunState state = new SimRunState(runId, scenario, "RUNNING", 1.0, now);
-        runs.put(runId, state);
-
-        return ResponseEntity.ok(new StartRunResponse(runId, scenario, "RUNNING", now));
+        ManageSimulationUseCase.RunSnapshot snapshot = manageSimulationUseCase.start(runId, scenario, request.variants());
+        return ResponseEntity.ok(snapshot);
     }
 
     @PostMapping("/{runId}/play")
-    public ResponseEntity<SimRunState> play(@PathVariable("runId") String runId) {
-        SimRunState existing = runs.get(runId);
-        if (existing == null) {
-            existing = new SimRunState(runId, "aug26-as-happened", "RUNNING", 1.0, clock.instant());
-        } else {
-            existing = new SimRunState(runId, existing.scenario(), "RUNNING", existing.speed(), clock.instant());
-        }
-        runs.put(runId, existing);
-        return ResponseEntity.ok(existing);
+    public ResponseEntity<ManageSimulationUseCase.RunSnapshot> play(@PathVariable("runId") String runId) {
+        ManageSimulationUseCase.RunSnapshot snapshot = manageSimulationUseCase.play(runId);
+        return snapshot != null ? ResponseEntity.ok(snapshot) : ResponseEntity.notFound().build();
     }
 
     @PostMapping("/{runId}/pause")
-    public ResponseEntity<SimRunState> pause(@PathVariable("runId") String runId) {
-        SimRunState existing = runs.get(runId);
-        if (existing == null) {
-            return ResponseEntity.notFound().build();
-        }
-        SimRunState paused = new SimRunState(runId, existing.scenario(), "PAUSED", existing.speed(), clock.instant());
-        runs.put(runId, paused);
-        return ResponseEntity.ok(paused);
+    public ResponseEntity<ManageSimulationUseCase.RunSnapshot> pause(@PathVariable("runId") String runId) {
+        ManageSimulationUseCase.RunSnapshot snapshot = manageSimulationUseCase.pause(runId);
+        return snapshot != null ? ResponseEntity.ok(snapshot) : ResponseEntity.notFound().build();
     }
 
     @PostMapping("/{runId}/speed")
-    public ResponseEntity<SimRunState> setSpeed(
+    public ResponseEntity<ManageSimulationUseCase.RunSnapshot> setSpeed(
             @PathVariable("runId") String runId,
             @RequestBody SpeedRequest request
     ) {
-        SimRunState existing = runs.get(runId);
-        if (existing == null) {
-            return ResponseEntity.notFound().build();
-        }
-        SimRunState updated = new SimRunState(runId, existing.scenario(), existing.status(), request.speed(), clock.instant());
-        runs.put(runId, updated);
-        return ResponseEntity.ok(updated);
+        ManageSimulationUseCase.RunSnapshot snapshot = manageSimulationUseCase.setSpeed(runId, request.speed());
+        return snapshot != null ? ResponseEntity.ok(snapshot) : ResponseEntity.notFound().build();
     }
 
     @GetMapping("/{runId}/clock")
-    public ResponseEntity<SimRunState> getClock(@PathVariable("runId") String runId) {
-        SimRunState existing = runs.get(runId);
-        if (existing == null) {
-            return ResponseEntity.notFound().build();
-        }
-        return ResponseEntity.ok(existing);
+    public ResponseEntity<ManageSimulationUseCase.RunSnapshot> getClock(@PathVariable("runId") String runId) {
+        ManageSimulationUseCase.RunSnapshot snapshot = manageSimulationUseCase.snapshot(runId);
+        return snapshot != null ? ResponseEntity.ok(snapshot) : ResponseEntity.notFound().build();
+    }
+
+    @GetMapping("/{runId}/timeline")
+    public ResponseEntity<List<ManageSimulationUseCase.TimelineMark>> getAsHappenedTimeline(
+            @PathVariable("runId") String runId
+    ) {
+        return ResponseEntity.ok(manageSimulationUseCase.getAsHappenedTimeline(runId));
     }
 }

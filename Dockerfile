@@ -42,6 +42,9 @@ COPY jd-adapter-cap/src ./jd-adapter-cap/src
 COPY jd-sim/src ./jd-sim/src
 COPY jd-boot/src ./jd-boot/src
 
+# Scenario YAML definitions, packaged onto the jd-boot classpath (see jd-boot/pom.xml)
+COPY scenarios/ ./scenarios/
+
 # Inject built static frontend into Spring Boot resources
 COPY --from=frontend-builder /app/console/dist ./jd-boot/src/main/resources/static
 

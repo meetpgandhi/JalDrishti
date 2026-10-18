@@ -1,7 +1,7 @@
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, watch, type Ref } from 'vue'
 
 export interface SseOptions {
-  runId?: string
+  runId?: string | Ref<string | null | undefined>
   onReading?: (data: any) => void
   onStationState?: (data: any) => void
   onIncident?: (data: any) => void
@@ -19,8 +19,14 @@ export function useSSE(options: SseOptions) {
   const lastEventId = ref<string | null>(null)
   let eventSource: EventSource | null = null
 
+  const resolveRunId = () => {
+    const r = options.runId
+    const value = typeof r === 'string' ? r : r?.value
+    return value || 'live'
+  }
+
   const connect = () => {
-    const runId = options.runId || 'live'
+    const runId = resolveRunId()
     const url = `/api/v1/stream?runId=${encodeURIComponent(runId)}`
 
     eventSource = new EventSource(url)
@@ -93,6 +99,16 @@ export function useSSE(options: SseOptions) {
   onUnmounted(() => {
     disconnect()
   })
+
+  // Reconnect to the new run's stream whenever the run changes (e.g. after starting a replay).
+  if (options.runId && typeof options.runId !== 'string') {
+    watch(options.runId, (next, prev) => {
+      if (next !== prev) {
+        disconnect()
+        connect()
+      }
+    })
+  }
 
   return {
     isConnected,

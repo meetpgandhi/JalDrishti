@@ -20,4 +20,4 @@ jaldrishti:
     region: asia-south1
     location: asia-south1
     temperature: 0.0
-    vertex-enabled: ${VERTEX_ENABLED:false}
+    vertex-enabled: ${JALDRISHTI_GEMINI_VERTEX_ENABLED:false}
