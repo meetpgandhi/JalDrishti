@@ -30,6 +30,20 @@ public record Site(
         double lon,
         List<ActorType> dutyHolderTypes
 ) {
+    public Site(
+            String id,
+            String corridorId,
+            String nameEn,
+            String nameNe,
+            List<String> aliases,
+            String type,
+            double riverKm,
+            double lat,
+            double lon
+    ) {
+        this(id, corridorId, nameEn, nameNe, aliases, type, riverKm, lat, lon, List.of());
+    }
+
     public Site {
         Objects.requireNonNull(id, "Site id must not be null");
         Objects.requireNonNull(corridorId, "corridorId must not be null");
@@ -38,3 +52,4 @@ public record Site(
         dutyHolderTypes = dutyHolderTypes == null ? Collections.emptyList() : List.copyOf(dutyHolderTypes);
     }
 }
+

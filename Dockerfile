@@ -45,8 +45,8 @@ COPY jd-boot/src ./jd-boot/src
 # Inject built static frontend into Spring Boot resources
 COPY --from=frontend-builder /app/console/dist ./jd-boot/src/main/resources/static
 
-# Build production executable uber-jar without running tests during image packaging
-RUN mvn clean package -DskipTests
+# Build production executable uber-jar without running or compiling tests during image packaging
+RUN mvn clean package -DskipTests -Dmaven.test.skip=true
 
 # ─────────────────────────────────────────────────────────────
 # Stage 3: Minimal Production Runtime

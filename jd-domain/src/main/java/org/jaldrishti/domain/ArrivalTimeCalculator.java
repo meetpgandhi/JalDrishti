@@ -151,12 +151,12 @@ public final class ArrivalTimeCalculator {
         Instant ref = referenceTime != null ? referenceTime : Instant.now();
         Instant endSlot = ref.plus(Duration.ofMinutes(10));
         List<ArrivalBand> bands = new ArrayList<>();
-        bands.add(calculateBand(new Site("BTW-S", "bhote-trishuli-narayani", "Betrawati", "बेत्रावती", List.of(), "SETTLEMENT", 38.0, 27.97, 85.18), 0.0, ref, endSlot));
-        bands.add(calculateBand(new Site("BID", "bhote-trishuli-narayani", "Trishuli Bazaar / Bidur", "विदुर", List.of(), "SETTLEMENT", 55.0, 27.91, 85.16), 0.0, ref, endSlot));
-        bands.add(calculateBand(new Site("GLB", "bhote-trishuli-narayani", "Galchhi Bazaar", "गल्छी", List.of(), "SETTLEMENT", 88.0, 27.81, 85.03), 0.0, ref, endSlot));
-        bands.add(calculateBand(new Site("MLB", "bhote-trishuli-narayani", "Malekhu (Furke)", "मलेखु", List.of(), "SETTLEMENT", 100.0, 27.81, 84.83), 0.0, ref, endSlot));
-        bands.add(calculateBand(new Site("MUG", "bhote-trishuli-narayani", "Mugling", "मुग्लिन", List.of(), "SETTLEMENT", 132.0, 27.86, 84.55), 0.0, ref, endSlot));
-        bands.add(calculateBand(new Site("DVS", "bhote-trishuli-narayani", "Devghat", "देवघाट", List.of(), "SETTLEMENT", 168.0, 27.70, 84.42), 0.0, ref, endSlot));
+        bands.add(calculateBand(new Site("BTW-S", "bhote-trishuli-narayani", "Betrawati", "बेत्रावती", List.of(), "SETTLEMENT", 38.0, 27.97, 85.18, List.of()), 0.0, ref, endSlot));
+        bands.add(calculateBand(new Site("BID", "bhote-trishuli-narayani", "Trishuli Bazaar / Bidur", "विदुर", List.of(), "SETTLEMENT", 55.0, 27.91, 85.16, List.of()), 0.0, ref, endSlot));
+        bands.add(calculateBand(new Site("GLB", "bhote-trishuli-narayani", "Galchhi Bazaar", "गल्छी", List.of(), "SETTLEMENT", 88.0, 27.81, 85.03, List.of()), 0.0, ref, endSlot));
+        bands.add(calculateBand(new Site("MLB", "bhote-trishuli-narayani", "Malekhu (Furke)", "मलेखु", List.of(), "SETTLEMENT", 100.0, 27.81, 84.83, List.of()), 0.0, ref, endSlot));
+        bands.add(calculateBand(new Site("MUG", "bhote-trishuli-narayani", "Mugling", "मुग्लिन", List.of(), "SETTLEMENT", 132.0, 27.86, 84.55, List.of()), 0.0, ref, endSlot));
+        bands.add(calculateBand(new Site("DVS", "bhote-trishuli-narayani", "Devghat", "देवघाट", List.of(), "SETTLEMENT", 168.0, 27.70, 84.42, List.of()), 0.0, ref, endSlot));
         return bands;
     }
 }
