@@ -1,0 +1,69 @@
+services:
+  # ─────────────────────────────────────────────
+  # PostgreSQL 16
+  # ─────────────────────────────────────────────
+  postgres:
+    image: postgres:16
+    container_name: jd-postgres
+    environment:
+      POSTGRES_DB: jaldrishti_dev
+      POSTGRES_USER: jaldrishti
+      POSTGRES_PASSWORD: jaldrishti_dev
+    ports:
+      - "5432:5432"
+    volumes:
+      - jd-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U jaldrishti -d jaldrishti_dev"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ─────────────────────────────────────────────
+  # Google Cloud Pub/Sub Emulator
+  # ─────────────────────────────────────────────
+  pubsub-emulator:
+    image: gcr.io/google.com/cloudsdktool/google-cloud-cli:emulators
+    container_name: jd-pubsub
+    command: >
+      gcloud beta emulators pubsub start
+        --project=jaldrishti-local
+        --host-port=0.0.0.0:8085
+    ports:
+      - "8085:8085"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8085"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ─────────────────────────────────────────────
+  # Pub/Sub topic bootstrapper (runs once)
+  # Creates all 8 required topics + dead-letter topics
+  # ─────────────────────────────────────────────
+  pubsub-init:
+    image: gcr.io/google.com/cloudsdktool/google-cloud-cli:latest
+    container_name: jd-pubsub-init
+    depends_on:
+      pubsub-emulator:
+        condition: service_healthy
+    environment:
+      PUBSUB_EMULATOR_HOST: pubsub-emulator:8085
+    entrypoint: >
+      bash -c "
+        export CLOUDSDK_CORE_PROJECT=jaldrishti-local &&
+        for topic in gauge-readings field-reports seismic-events observations
+                     incident-events dispatch-requests acks clock-control; do
+          gcloud pubsub topics create $${topic} --quiet || true
+          gcloud pubsub topics create $${topic}-dlq --quiet || true
+          gcloud pubsub subscriptions create $${topic}-sub
+            --topic=$${topic}
+            --dead-letter-topic=$${topic}-dlq
+            --quiet || true
+        done &&
+        echo 'Pub/Sub topics initialised'
+      "
+    restart: "no"
+
+volumes:
+  jd-postgres-data:

@@ -1,0 +1,38 @@
+target/
+!.mvn/wrapper/maven-wrapper.jar
+.mvn/wrapper/dist/
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+### IntelliJ IDEA ###
+.idea/
+*.iws
+*.iml
+*.ipr
+out/
+
+### VS Code / Antigravity ###
+.vscode/
+.DS_Store
+
+### Node / Console ###
+node_modules/
+dist/
+
+### Logs & Env ###
+*.log
+.env
+.env.local
+.venv/
+
+### Console (Vue 3) ###
+console/node_modules/
+console/dist/
+
+### Scenario replay outputs ###
+scenarios/output/
+scenarios/replay-*.json
+scenarios/replay-*.pdf
+
+### jd-boot static (built by console) ###
+jd-boot/src/main/resources/static/

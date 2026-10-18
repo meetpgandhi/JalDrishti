@@ -1,0 +1,118 @@
+# Scenario S1: 26 August 2026 — As Happened
+# Proves: Silence corroboration beats the phone call.
+# Pass criteria: WARNING ≤ 08:53 (Syaphrubesi 08:40 variant, 3-min grace)
+#                WARNING ≤ 09:03 (Syaphrubesi 08:50 variant)
+# All [P] timeline points must be reproduced exactly.
+#
+# See spec Section 11 for full pass criteria and Section 6 for R5 worked example.
+
+scenario: aug26-as-happened
+version: 3
+corridor: bhote-trishuli-narayani
+configVersion: 1        # bumped on each corridor_config change
+start: "2026-08-26T08:00:00+05:45"
+end:   "2026-08-26T16:30:00+05:45"
+seed: 42
+
+# Judge-toggleable in the console UI
+variants:
+  syaphrubesiLastReading: "08:40"   # "08:40" or "08:50" — sources disagree [P]
+  malekhuCrossing: "11:20"          # "11:20" or "11:43" — sources disagree [P]
+  graceMinutes: 3                   # sensitivity: 3 or 10 [A]
+  phoneCallAt0900: true             # false = S2 counterfactual
+
+speedProfile:
+  - {from: "08:00", to: "08:36", speed: 60}
+  - {from: "08:36", to: "09:05", speed: 2}    # the critical half-hour
+  - {from: "09:05", to: "11:05", speed: 120}
+  - {from: "11:05", to: "11:45", speed: 10}
+  - {from: "11:45", to: "16:30", speed: 240}
+
+bookmarks:
+  - {at: "08:50", label: "Two gauges go dark"}
+  - {at: "08:53", label: "JalDrishti WARNING expected"}
+  - {at: "09:15", label: "Actual SMS send (as happened)"}
+  - {at: "11:20", label: "Malekhu threshold crossed"}
+
+stations:
+  RSW:
+    # Calm before the event: 1.62m was below warning level (6.0m) [P]
+    generator: {model: flat, level: 1.65, trendPer10Min: -0.01, noiseSd: 0.01, tag: A}
+    pinned:
+      - {t: "08:40", level: 1.62, tag: P, src: "nepalitimes / scienceblog"}
+    outage: {fromSlot: "08:50", reason: DESTROYED, tag: P}
+
+  SYP:
+    # Calm: 3.80m was below warning level (5.5m) [P]
+    generator: {model: flat, level: 3.78, noiseSd: 0.01, tag: A}
+    pinned:
+      - {t: "${variants.syaphrubesiLastReading}", level: 3.80, tag: P, src: "spotlight-nepal"}
+    outage: {afterLastPinned: true, reason: DESTROYED, tag: P}
+
+  BTW:
+    # Calm: 3.55m was below warning level (4.1m) [P]
+    generator: {model: flat, level: 3.52, noiseSd: 0.01, tag: A}
+    pinned:
+      - {t: "09:20", level: 3.55, tag: P, src: "linkedin-sensor-installer"}
+    outage: {fromSlot: "09:30", reason: DESTROYED, tag: P}
+
+  GLC:
+    # Recorded above 14m but exact timing unknown [P level, A timing]
+    generator: {model: flat, level: 5.0, noiseSd: 0.02, tag: A}
+
+  MLK:
+    # ~4m jump at the cited crossing time [P jump magnitude, A shape]
+    generator:
+      model: hydrograph
+      base: 4.0
+      jumpAt: "${variants.malekhuCrossing}"
+      jumpM: 4.0
+      peakAfterMin: 40
+      recessionHalfLifeMin: 90
+      tag: A
+
+  DVG:
+    # Peak 6.57m at 16:00 [P]; must not cross warning (7.3m) [P]
+    generator:
+      model: hydrograph
+      base: 4.6
+      riseStart: "14:00"
+      peak: {t: "16:00", level: 6.57, tag: P, src: "scienceblog / nepalitimes"}
+      mustStayBelow: 7.3   # [P] warning level — never crossed on 26 Aug
+      tag: A
+
+weather:
+  catchmentRainMm3h: {value: 0, tag: P, src: "smartwatermagazine — no rain that morning"}
+
+events:
+  # Seismic event at 08:37 [P]; publication delay ~15 min [A]
+  - t: "08:37"
+    type: SEISMIC
+    magnitude: 4.4         # [P] USGS / SnowLion (some sources say M4; HiRISK says "above M4")
+    lat: 28.2887
+    lon: 85.5282
+    publishDelayMin: 15    # [A] public seismic feeds latency unmeasured
+    tag: "P (event), A (delay)"
+
+  # Phone call from DAO Dhunche at 09:00 [P fact; exact wording [A]]
+  - t: "09:00"
+    type: FIELD_REPORT
+    sender: DAO_DHUNCHE
+    trust: OFFICIAL
+    lang: ne
+    text: "रसुवागढीतिर भोटेकोसीमा ठूलो बाढी आयो।"
+    tag: "P (call happened), A (wording)"
+    enabledWhen: variants.phoneCallAt0900
+
+# As-happened timeline for the comparison track in the console
+asHappened:
+  - {t: "09:15", label: "DHM activates early warning; 600,000+ SMS sent", tag: P, src: "nepalitimes / scienceblog"}
+  - {t: "09:42", label: "Some residents receive the SMS", tag: P, src: "ekantipur"}
+  - {t: "11:00", label: "High-risk declaration, five districts", tag: P, src: "scienceblog"}
+  - {t: "${variants.malekhuCrossing}", label: "First threshold crossed anywhere (Malekhu)", tag: P}
+
+# Ground-truth flood arrivals for the replay report
+groundTruthArrivals:
+  BTW-S: {from: "09:20", to: "09:30", tag: P, src: "linkedin-installer / spotlight-nepal"}
+  MLB:   {from: "11:10", to: "11:43", tag: P, src: "nepalitimes / ratopati"}
+  MUG:   {at: "13:00", toleranceMin: 15, tag: P, src: "hirisk"}

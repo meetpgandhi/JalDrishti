@@ -1,0 +1,73 @@
+# Scenario S4: Telemetry Outage
+# Proves: A carrier failure is not a flood.
+# Pass: 0 WATCHes; one outage ticket opened.
+#
+# See spec Section 11 / S4.
+
+scenario: telemetry-outage
+version: 1
+corridor: bhote-trishuli-narayani
+configVersion: 1
+start: "2026-08-26T02:00:00+05:45"
+end:   "2026-08-26T04:00:00+05:45"
+seed: 13
+
+variants:
+  graceMinutes: 3   # [A]
+
+speedProfile:
+  - {from: "02:00", to: "02:07", speed: 30}
+  - {from: "02:07", to: "02:20", speed: 2}    # outage fires; watch R4
+  - {from: "02:20", to: "04:00", speed: 60}
+
+bookmarks:
+  - {at: "02:10", label: "Carrier fails — 6 stations silent"}
+  - {at: "02:13", label: "TELEMETRY_OUTAGE expected (no WATCH)"}
+
+stations:
+  RSW:
+    generator: {model: flat, level: 1.2, noiseSd: 0.01, tag: A}
+    outage: {fromSlot: "02:10", reason: CARRIER_FAILURE, telemetryGroup: vsat-rasuwa, tag: A}
+    restore: {at: "03:30", tag: A}
+  SYP:
+    generator: {model: flat, level: 3.0, noiseSd: 0.01, tag: A}
+    outage: {fromSlot: "02:10", reason: CARRIER_FAILURE, telemetryGroup: vsat-rasuwa, tag: A}
+    restore: {at: "03:30", tag: A}
+  BTW:
+    generator: {model: flat, level: 2.5, noiseSd: 0.01, tag: A}
+    outage: {fromSlot: "02:10", reason: CARRIER_FAILURE, telemetryGroup: gsm-nuwakot, tag: A}
+    restore: {at: "03:30", tag: A}
+  GLC:
+    generator: {model: flat, level: 4.0, noiseSd: 0.02, tag: A}
+    outage: {fromSlot: "02:10", reason: CARRIER_FAILURE, telemetryGroup: gsm-dhading, tag: A}
+    restore: {at: "03:30", tag: A}
+  MLK:
+    generator: {model: flat, level: 3.5, noiseSd: 0.01, tag: A}
+    outage: {fromSlot: "02:10", reason: CARRIER_FAILURE, telemetryGroup: gsm-dhading, tag: A}
+    restore: {at: "03:30", tag: A}
+  DVG:
+    generator: {model: flat, level: 5.0, noiseSd: 0.01, tag: A}
+    # DVG on gsm-chitwan — stays reporting; only 5 of 6 corridor stations affected here
+    # External basin stations (not modelled) fill the remaining count
+
+# 6 stations across multiple groups => R4 fires (>50% of each affected group)
+# The rule checks per telemetry group; if > half of any group is silent → TELEMETRY_OUTAGE
+externalStationGroups:
+  - group: vsat-rasuwa
+    totalStations: 4
+    silentStations: 2      # RSW + SYP = 2/4 = exactly 50% — NOT > 50%; adjust if needed [A]
+  - group: gsm-nuwakot
+    totalStations: 3
+    silentStations: 2      # BTW + 1 external = 2/3 > 50% → OUTAGE [A]
+  - group: gsm-dhading
+    totalStations: 4
+    silentStations: 2      # GLC + MLK = 2/4 = 50% — tune to trigger [A]
+
+weather:
+  catchmentRainMm3h: {value: 5, tag: A}
+
+passCriteria:
+  - type: NO_WATCH_ISSUED
+    description: "0 WATCHes must open"
+  - type: OUTAGE_TICKET_OPENED
+    description: "One TELEMETRY_OUTAGE ticket must open within 60s of the outage"

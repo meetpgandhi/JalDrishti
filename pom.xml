@@ -1,0 +1,203 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>org.jaldrishti</groupId>
+    <artifactId>jaldrishti-parent</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
+    <packaging>pom</packaging>
+
+    <name>JalDrishti :: Parent</name>
+    <description>JalDrishti v3 — Flash-Flood Warning-to-Action System</description>
+
+    <properties>
+        <java.version>21</java.version>
+        <maven.compiler.source>21</maven.compiler.source>
+        <maven.compiler.target>21</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        
+        <!-- Dependency Versions -->
+        <spring-boot.version>3.4.3</spring-boot.version>
+        <google-genai.version>0.1.1</google-genai.version>
+        <google-pubsub.version>1.134.0</google-pubsub.version>
+        <jooq.version>3.19.16</jooq.version>
+        <flyway.version>10.21.0</flyway.version>
+        <postgresql.version>42.7.5</postgresql.version>
+        <jackson.version>2.18.2</jackson.version>
+        <junit-jupiter.version>5.11.4</junit-jupiter.version>
+        <assertj.version>3.27.3</assertj.version>
+        <mockito.version>5.14.2</mockito.version>
+        <jqwik.version>1.9.2</jqwik.version>
+        <testcontainers.version>1.20.4</testcontainers.version>
+    </properties>
+
+    <modules>
+        <module>jd-domain</module>
+        <module>jd-application</module>
+        <module>jd-adapter-pubsub</module>
+        <module>jd-adapter-rest</module>
+        <module>jd-adapter-persistence</module>
+        <module>jd-adapter-gemini</module>
+        <module>jd-adapter-channels</module>
+        <module>jd-adapter-cap</module>
+        <module>jd-sim</module>
+        <module>jd-boot</module>
+    </modules>
+
+    <dependencyManagement>
+        <dependencies>
+            <!-- Internal Hexagonal Modules -->
+            <dependency>
+                <groupId>org.jaldrishti</groupId>
+                <artifactId>jd-domain</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.jaldrishti</groupId>
+                <artifactId>jd-application</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.jaldrishti</groupId>
+                <artifactId>jd-adapter-pubsub</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.jaldrishti</groupId>
+                <artifactId>jd-adapter-rest</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.jaldrishti</groupId>
+                <artifactId>jd-adapter-persistence</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.jaldrishti</groupId>
+                <artifactId>jd-adapter-gemini</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.jaldrishti</groupId>
+                <artifactId>jd-adapter-channels</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.jaldrishti</groupId>
+                <artifactId>jd-adapter-cap</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.jaldrishti</groupId>
+                <artifactId>jd-sim</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <!-- Spring Boot BOM -->
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-dependencies</artifactId>
+                <version>${spring-boot.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+
+            <!-- Google GenAI SDK (Vertex AI Backend) -->
+            <dependency>
+                <groupId>com.google.genai</groupId>
+                <artifactId>google-genai</artifactId>
+                <version>${google-genai.version}</version>
+            </dependency>
+
+            <!-- Google Cloud Pub/Sub -->
+            <dependency>
+                <groupId>com.google.cloud</groupId>
+                <artifactId>google-cloud-pubsub</artifactId>
+                <version>${google-pubsub.version}</version>
+            </dependency>
+
+            <!-- Testing -->
+            <dependency>
+                <groupId>org.junit.jupiter</groupId>
+                <artifactId>junit-jupiter</artifactId>
+                <version>${junit-jupiter.version}</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.assertj</groupId>
+                <artifactId>assertj-core</artifactId>
+                <version>${assertj.version}</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.mockito</groupId>
+                <artifactId>mockito-core</artifactId>
+                <version>${mockito.version}</version>
+                <scope>test</scope>
+            </dependency>
+
+            <!-- Property-based testing for domain rules (R5 order-consistency) -->
+            <dependency>
+                <groupId>net.jqwik</groupId>
+                <artifactId>jqwik</artifactId>
+                <version>${jqwik.version}</version>
+                <scope>test</scope>
+            </dependency>
+
+            <!-- Testcontainers BOM for integration tests -->
+            <dependency>
+                <groupId>org.testcontainers</groupId>
+                <artifactId>testcontainers-bom</artifactId>
+                <version>${testcontainers.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+
+            <!-- Jackson (explicit; also covered by Spring Boot BOM) -->
+            <dependency>
+                <groupId>com.fasterxml.jackson.core</groupId>
+                <artifactId>jackson-databind</artifactId>
+                <version>${jackson.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.fasterxml.jackson.dataformat</groupId>
+                <artifactId>jackson-dataformat-yaml</artifactId>
+                <version>${jackson.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.fasterxml.jackson.dataformat</groupId>
+                <artifactId>jackson-dataformat-xml</artifactId>
+                <version>${jackson.version}</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <build>
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-compiler-plugin</artifactId>
+                    <version>3.13.0</version>
+                    <configuration>
+                        <source>${java.version}</source>
+                        <target>${java.version}</target>
+                        <parameters>true</parameters>
+                    </configuration>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-surefire-plugin</artifactId>
+                    <version>3.5.2</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.springframework.boot</groupId>
+                    <artifactId>spring-boot-maven-plugin</artifactId>
+                    <version>${spring-boot.version}</version>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+    </build>
+</project>

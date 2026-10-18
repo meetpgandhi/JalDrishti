@@ -1,0 +1,43 @@
+# Scenario S7: Judge Sandbox
+# Proves: Any injection flows through the real path safely (no crashes, every injection logged).
+# This scenario has no pass/fail assertions beyond: nothing crashes and every injection is stored.
+#
+# See spec Section 11 / S7.
+
+scenario: sandbox
+version: 1
+corridor: bhote-trishuli-narayani
+configVersion: 1
+start: "2026-08-26T10:00:00+05:45"
+end:   "2026-08-26T18:00:00+05:45"
+seed: 1
+
+variants:
+  graceMinutes: 3   # [A]
+
+speedProfile:
+  - {from: "10:00", to: "18:00", speed: 5}   # 1–10× per spec; 5× keeps it lively
+
+# All stations start calm — judges interact freely
+stations:
+  RSW:
+    generator: {model: flat, level: 1.4, noiseSd: 0.01, tag: A}
+  SYP:
+    generator: {model: flat, level: 3.2, noiseSd: 0.01, tag: A}
+  BTW:
+    generator: {model: flat, level: 2.6, noiseSd: 0.01, tag: A}
+  GLC:
+    generator: {model: flat, level: 4.8, noiseSd: 0.02, tag: A}
+  MLK:
+    generator: {model: flat, level: 3.6, noiseSd: 0.01, tag: A}
+  DVG:
+    generator: {model: flat, level: 5.2, noiseSd: 0.01, tag: A}
+
+weather:
+  catchmentRainMm3h: {value: 10, tag: A}
+
+passCriteria:
+  - type: NO_CRASH
+    description: "Service must not crash regardless of injections"
+  - type: ALL_INJECTIONS_LOGGED
+    description: "Every live injection stored with source = LIVE_INJECTION"

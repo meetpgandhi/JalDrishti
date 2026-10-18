@@ -1,0 +1,117 @@
+name: CI
+
+on:
+  push:
+    branches: ["main", "sprint-*", "feat/*", "fix/*"]
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  # ─────────────────────────────────────────────
+  # 1. Domain unit tests (pure Java, no Docker)
+  # ─────────────────────────────────────────────
+  domain-tests:
+    name: Domain Unit Tests (R1–R11)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: "21"
+          distribution: temurin
+          cache: maven
+
+      - name: Build and test jd-domain
+        run: ./mvnw test -pl jd-domain -am -q
+
+  # ─────────────────────────────────────────────
+  # 2. Full build + integration tests (Docker)
+  # ─────────────────────────────────────────────
+  build-and-test:
+    name: Build & Integration Tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: jaldrishti_test
+          POSTGRES_USER: jaldrishti
+          POSTGRES_PASSWORD: jaldrishti_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      pubsub-emulator:
+        image: gcr.io/google.com/cloudsdktool/google-cloud-cli:emulators
+        env:
+          PUBSUB_PROJECT_ID: jaldrishti-ci
+        ports:
+          - 8085:8085
+        options: >-
+          --entrypoint gcloud
+        # Note: started with: gcloud beta emulators pubsub start --host-port=0.0.0.0:8085
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: "21"
+          distribution: temurin
+          cache: maven
+
+      - name: Build all modules
+        run: ./mvnw compile -q
+
+      - name: Run all tests
+        env:
+          SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/jaldrishti_test
+          DB_USER: jaldrishti
+          DB_PASSWORD: jaldrishti_test
+          PUBSUB_EMULATOR_HOST: localhost:8085
+          SPRING_PROFILES_ACTIVE: sim
+        run: ./mvnw test -q
+
+      - name: Upload test reports
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: surefire-reports
+          path: "**/target/surefire-reports/*.xml"
+          retention-days: 7
+
+  # ─────────────────────────────────────────────
+  # 3. Sprint 0 gate: validate all POMs
+  # ─────────────────────────────────────────────
+  validate-pom:
+    name: Validate POM
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: "21"
+          distribution: temurin
+          cache: maven
+
+      - name: Validate Maven multi-module structure
+        run: ./mvnw validate -q
+
+      - name: Check jd-domain has no framework imports
+        run: |
+          if grep -r "springframework\|javax\.persistence\|com\.fasterxml\.jackson" \
+               jd-domain/src/main/java/ 2>/dev/null; then
+            echo "❌ FAIL: jd-domain contains forbidden framework imports!"
+            exit 1
+          else
+            echo "✅ jd-domain is clean (no Spring/Jackson/JPA imports)"
+          fi

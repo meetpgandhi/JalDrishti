@@ -1,0 +1,71 @@
+# Scenario S3: Gauge Power Failure
+# Proves: One silent gauge NEVER becomes a public alert.
+# Pass: 0 public WARNINGs; only forecaster + SYP gauge reader notified; WATCH closes.
+#
+# See spec Section 11 / S3 for full pass criteria.
+
+scenario: gauge-power-failure
+version: 1
+corridor: bhote-trishuli-narayani
+configVersion: 1
+start: "2026-08-26T14:00:00+05:45"
+end:   "2026-08-26T17:00:00+05:45"
+seed: 7
+
+variants:
+  graceMinutes: 3   # [A]
+
+speedProfile:
+  - {from: "14:00", to: "14:12", speed: 30}
+  - {from: "14:12", to: "14:35", speed: 2}   # key window: SYP goes silent; gauge reader reports
+  - {from: "14:35", to: "17:00", speed: 60}
+
+bookmarks:
+  - {at: "14:15", label: "SYP loses power"}
+  - {at: "14:23", label: "SYP SILENT — internal WATCH expected"}
+  - {at: "14:30", label: "Gauge reader reports normal river"}
+
+stations:
+  RSW:
+    generator: {model: flat, level: 1.2, noiseSd: 0.01, tag: A}
+  SYP:
+    generator: {model: flat, level: 3.1, noiseSd: 0.01, tag: A}
+    outage: {fromSlot: "14:20", reason: POWER_FAILURE, tag: A}
+    restore: {at: "15:10", tag: A}
+  BTW:
+    generator: {model: flat, level: 2.8, noiseSd: 0.01, tag: A}
+  GLC:
+    generator: {model: flat, level: 4.5, noiseSd: 0.02, tag: A}
+  MLK:
+    generator: {model: flat, level: 3.8, noiseSd: 0.01, tag: A}
+  DVG:
+    generator: {model: flat, level: 5.1, noiseSd: 0.01, tag: A}
+
+weather:
+  catchmentRainMm3h: {value: 12, tag: A}   # calm monsoon day with some rain
+
+events:
+  # Pre-recorded gauge reader report of a normal river (or a judge records it live)
+  - t: "14:30"
+    type: FIELD_REPORT
+    sender: GAUGE_READER_SYP
+    trust: OBSERVER
+    lang: ne
+    text: "नदी सामान्य छ। पानीको रंग सफा छ, कुनै खतरा छैन।"  # "River is normal. Water is clear, no danger."
+    hazardType: NO_HAZARD
+    tag: A
+
+passCriteria:
+  - type: NO_WARNING_ISSUED
+    description: "0 public WARNINGs must be issued"
+  - type: WATCH_OPENS_AT
+    stationId: SYP
+    expectedAt: "14:23"
+    toleranceMin: 1
+    description: "Internal WATCH opens at 14:23 sweep (silence at 14:20, grace 3 min)"
+  - type: WATCH_CLOSES
+    expectedBy: "14:35"
+    description: "WATCH closes after gauge-reader NO_HAZARD report (R11)"
+  - type: NOTIFIED_ONLY
+    recipients: [FORECASTER, GAUGE_READER_SYP]
+    description: "Only forecaster and SYP gauge reader are notified"

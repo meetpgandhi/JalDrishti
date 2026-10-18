@@ -1,0 +1,68 @@
+# Scenario S6: Second Wave — Heightened Watch
+# Proves: A known upstream hazard changes the rules (R10).
+# Real context: 30 Aug 2026 NDRRMA warned of another flood — Lhende Khola obstructed,
+#               Galchhi running 3m above normal [P] (IANS)
+# Pass: WARNING at 10:23 sweep (one silence of top sensor; no second station needed).
+#
+# See spec Section 11 / S6.
+
+scenario: second-wave
+version: 1
+corridor: bhote-trishuli-narayani
+configVersion: 1
+start: "2026-08-30T10:00:00+05:45"
+end:   "2026-08-30T12:00:00+05:45"
+seed: 99
+
+variants:
+  graceMinutes: 3   # [A]
+
+speedProfile:
+  - {from: "10:00", to: "10:18", speed: 30}
+  - {from: "10:18", to: "10:30", speed: 2}   # sensor goes silent; WARNING at 10:23
+  - {from: "10:30", to: "12:00", speed: 30}
+
+bookmarks:
+  - {at: "10:00", label: "Forecaster declares heightened watch"}
+  - {at: "10:20", label: "RSW-TEMP sensor goes silent"}
+  - {at: "10:23", label: "WARNING expected (R10 — single silence)"}
+
+# Context: temporary sensor replacing RSW after original was destroyed [A]
+stations:
+  RSW-TEMP:
+    nameEn: "Rasuwagadhi temporary sensor"
+    isTopStation: true   # designated as the top-of-corridor sensor for R10
+    generator: {model: flat, level: 1.1, noiseSd: 0.01, tag: A}
+    outage: {fromSlot: "10:20", reason: UNKNOWN, tag: A}
+  SYP:
+    generator: {model: flat, level: 3.5, noiseSd: 0.01, tag: A}
+  BTW:
+    generator: {model: flat, level: 2.9, noiseSd: 0.01, tag: A}
+  GLC:
+    # 3m above normal [P] — Galchhi above 14m [P]; exact value [A]
+    generator: {model: flat, level: 14.2, noiseSd: 0.05, tag: A}
+  MLK:
+    generator: {model: flat, level: 5.0, noiseSd: 0.02, tag: A}
+  DVG:
+    generator: {model: flat, level: 5.2, noiseSd: 0.01, tag: A}
+
+weather:
+  catchmentRainMm3h: {value: 8, tag: A}
+
+events:
+  # Forecaster declares heightened watch at scenario start
+  - t: "10:00"
+    type: HEIGHTENED_WATCH
+    actor: FORECASTER
+    reason: "Lhende Khola obstruction — upstream hazard known [P context]"
+    durationHours: 72
+    tag: "P (context), A (scenario timing)"
+
+passCriteria:
+  - type: WARNING_AT
+    expectedAt: "10:23"
+    toleranceMin: 1
+    triggerRule: R10
+    description: "R10: single silence of top station under heightened watch → WARNING"
+  - type: NO_CORROBORATION_REQUIRED
+    description: "No second station needed; R10 overrides R5 corroboration requirement"

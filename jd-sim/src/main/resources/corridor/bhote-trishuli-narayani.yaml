@@ -1,0 +1,258 @@
+# Bhote Koshi – Trishuli – Narayani Corridor
+# Rasuwagadi to Devghat, Nepal
+# Sprint 0: River-km values [A] are placeholders until snapped to HydroSHEDS/OSM channel.
+# [P] values come from the v3 specification and its cited sources.
+
+corridorId: bhote-trishuli-narayani
+nameEn: "Bhote Koshi – Trishuli – Narayani"
+nameNe: "भोटेकोसी – त्रिशूली – नारायणी"
+totalKm: 168  # [P] Rasuwagadi to Devghat
+
+# --------------------------------------------------------------------------
+# Gauge stations (as defined in Section 4 of the spec)
+# --------------------------------------------------------------------------
+stations:
+  - id: RSW
+    nameEn: Rasuwagadhi
+    nameNe: रसुवागढी
+    river: Bhote Koshi
+    riverKm: 0          # [P] origin point
+    lat: 28.2887
+    lon: 85.5282
+    warningM: 6.0       # [P] Spotlight Nepal / Nepali Times
+    dangerM: null       # obtain from DHM [A]
+    cadenceMin: 10      # [P] DHM standard
+    telemetryGroup: vsat-rasuwa
+    aliases: [Rasuwagadhi, रसुवागढी, RSW]
+
+  - id: SYP
+    nameEn: Syaphrubesi
+    nameNe: स्याफ्रुबेसी
+    river: Bhote Koshi
+    riverKm: 15         # [P] spec Section 4
+    lat: 28.168
+    lon: 85.371
+    warningM: 5.5       # [P] Spotlight Nepal / Nepali Times
+    dangerM: null       # obtain from DHM [A]
+    cadenceMin: 10      # [P]
+    telemetryGroup: vsat-rasuwa
+    aliases: [Syaphrubesi, Syabrubesi, स्याफ्रुबेसी, SYP]
+
+  - id: BTW
+    nameEn: Betrawati
+    nameNe: बेत्रावती
+    river: Trishuli
+    riverKm: 38         # [P] model midpoint (36–40 km range)
+    lat: 27.974
+    lon: 85.181
+    warningM: 4.1       # [P] LinkedIn sensor installer / Nepali Times
+    dangerM: null       # obtain from DHM [A]
+    cadenceMin: 10      # [P]
+    telemetryGroup: gsm-nuwakot
+    aliases: [Betrawati, बेत्रावती, BTW]
+
+  - id: GLC
+    nameEn: Galchhi
+    nameNe: गल्छी
+    river: Trishuli
+    riverKm: 88         # [A] to be snapped from OSM
+    lat: 27.850
+    lon: 85.066
+    warningM: null      # obtain from DHM [A]
+    dangerM: null       # obtain from DHM [A]
+    cadenceMin: 10      # [P]
+    telemetryGroup: gsm-dhading
+    aliases: [Galchhi, Galchi, गल्छी, GLC]
+
+  - id: MLK
+    nameEn: Malekhu (Furke)
+    nameNe: मालेखु
+    river: Trishuli
+    riverKm: 100        # [P] spec Section 4
+    lat: 27.879
+    lon: 84.953
+    warningM: null      # obtain from DHM [A]
+    dangerM: null       # obtain from DHM [A]
+    cadenceMin: 10      # [P]
+    telemetryGroup: gsm-dhading
+    aliases: [Malekhu, Furke, मालेखु, MLK]
+
+  - id: DVG
+    nameEn: Devghat
+    nameNe: देवघाट
+    river: Narayani
+    riverKm: 168        # [P] spec Section 4
+    lat: 27.706
+    lon: 84.437
+    warningM: 7.3       # [P] ScienceBlog / DHM flood monitoring
+    dangerM: 9.0        # [P] ScienceBlog / DHM flood monitoring
+    cadenceMin: 10      # [P]
+    telemetryGroup: gsm-chitwan
+    aliases: [Devghat, देवघाट, DVG]
+
+# --------------------------------------------------------------------------
+# Gazetteer sites (settlements, hydropower plants, highway junctions)
+# --------------------------------------------------------------------------
+sites:
+  - id: TIM
+    nameEn: Timure
+    nameNe: तिमुरे
+    type: SETTLEMENT
+    riverKm: 3          # [A] placeholder – snap from OSM
+    lat: 28.270
+    lon: 85.514
+    dutyHolderTypes: [WARD_CHAIR, TRAFFIC_POLICE]
+    notes: "Customs post; destroyed again after 2025 flood rebuilding [P]"
+
+  - id: RHP
+    nameEn: Rasuwagadhi HPP (111 MW)
+    nameNe: रसुवागढी जलविद्युत
+    type: HYDROPOWER
+    riverKm: 5          # [A]
+    lat: 28.261
+    lon: 85.524
+    dutyHolderTypes: [HYDRO_CONTROL, HYDRO_SAFETY]
+    notes: "Powerhouse and substation reported destroyed on 26 Aug [P]"
+
+  - id: SYB
+    nameEn: Syaphrubesi
+    nameNe: स्याफ्रुबेसी
+    type: SETTLEMENT
+    riverKm: 15         # [P] co-located with gauge SYP
+    lat: 28.168
+    lon: 85.371
+    dutyHolderTypes: [WARD_CHAIR, SCHOOL_PRINCIPAL]
+    notes: "Over 240 buildings destroyed in one mapped area [P] (Copernicus)"
+
+  - id: UT1
+    nameEn: Upper Trishuli-1 (under construction)
+    nameNe: माथिल्लो त्रिशूली-१
+    type: HYDROPOWER
+    riverKm: 25         # [A]
+    lat: 28.082
+    lon: 85.298
+    dutyHolderTypes: [HYDRO_SAFETY]
+    notes: "Site destroyed on 26 Aug [P]"
+
+  - id: BTW-S
+    nameEn: Betrawati
+    nameNe: बेत्रावती
+    type: SETTLEMENT
+    riverKm: 38         # [P]
+    lat: 27.974
+    lon: 85.181
+    dutyHolderTypes: [WARD_CHAIR, TRAFFIC_POLICE]
+    notes: "Gauge lost 09:20–09:30 on 26 Aug [P]"
+
+  - id: BID
+    nameEn: Trishuli Bazaar / Bidur
+    nameNe: त्रिशूली बजार / बिदुर
+    type: SETTLEMENT
+    riverKm: 55         # [A]
+    lat: 27.992
+    lon: 85.108
+    dutyHolderTypes: [WARD_CHAIR, SCHOOL_PRINCIPAL]
+    notes: "~60 houses swept; 1,643 students evacuated on 26 Aug [P] (ShareSansar)"
+
+  - id: TDH
+    nameEn: Trishuli and Devighat HPPs
+    nameNe: त्रिशूली र देवीघाट जलविद्युत
+    type: HYDROPOWER
+    riverKm: 57         # [A]
+    lat: 27.970
+    lon: 85.097
+    dutyHolderTypes: [HYDRO_CONTROL, HYDRO_SAFETY]
+    notes: "Damaged on 26 Aug [P]"
+
+  - id: GLB
+    nameEn: Galchhi Bazaar
+    nameNe: गल्छी बजार
+    type: SETTLEMENT
+    riverKm: 88         # [A]
+    lat: 27.850
+    lon: 85.066
+    dutyHolderTypes: [WARD_CHAIR, TRAFFIC_POLICE]
+    notes: "Damaged on 26 Aug [P] (Copernicus)"
+
+  - id: MLB
+    nameEn: Malekhu
+    nameNe: मालेखु
+    type: SETTLEMENT
+    riverKm: 100        # [P]
+    lat: 27.879
+    lon: 84.953
+    dutyHolderTypes: [WARD_CHAIR, TRAFFIC_POLICE]
+    notes: "Danger level crossed 11:20–11:43 on 26 Aug [P]"
+
+  - id: MUG
+    nameEn: Mugling
+    nameNe: मुग्लिन
+    type: HIGHWAY_JUNCTION
+    riverKm: 132        # [A] ~132 km from spec
+    lat: 27.872
+    lon: 84.729
+    dutyHolderTypes: [TRAFFIC_POLICE]
+    notes: "Flood arrived ~13:00 on 26 Aug [P]"
+
+  - id: DVS
+    nameEn: Devghat
+    nameNe: देवघाट
+    type: SETTLEMENT
+    riverKm: 168        # [P]
+    lat: 27.706
+    lon: 84.437
+    dutyHolderTypes: [WARD_CHAIR]
+    notes: "Peak 16:00, 6.57 m on 26 Aug [P]"
+
+# --------------------------------------------------------------------------
+# Reach wave speeds (calibrated from 26 August 2026)
+# --------------------------------------------------------------------------
+reaches:
+  - from: RSW
+    to: BTW
+    distanceKm: 38      # [P] 36–40 km range; 38 is the model midpoint
+    speedMinMps: 13.0   # [D] 36 km / 46 min
+    speedMaxMps: 18.5   # [D] 40 km / 36 min
+    notes: "Front at RSW 08:44; BTW lost 09:20–09:30 [P]"
+
+  - from: BTW
+    to: MLK
+    distanceKm: 62      # [D]
+    speedMinMps: 7.2    # [D] 62 km / 145 min
+    speedMaxMps: 10.3   # [D] 62 km / 100 min
+    notes: "BTW lost 09:20–09:30; MLK jump 11:10–11:43 [P]"
+
+  - from: MLK
+    to: MUG
+    distanceKm: 32      # [A] distance approximate
+    speedMinMps: 4.8    # [D] low confidence
+    speedMaxMps: 6.9    # [D] low confidence
+    notes: "MLK 11:10–11:43; Mugling ~13:00 [P]/[A]"
+
+  - from: MUG
+    to: DVG
+    distanceKm: 36      # [A]
+    speedMinMps: 6.0    # [A] low confidence
+    speedMaxMps: 12.0   # [A] low confidence
+    notes: "Mugling ~13:00; DVG rise from ~14:00 [A]"
+
+# --------------------------------------------------------------------------
+# Arrival-time calibration points (from RSW front at 08:44 on 26 Aug [P])
+# --------------------------------------------------------------------------
+arrivalCalibration:
+  anchorStation: RSW
+  anchorFrontTime: "2026-08-26T08:44:00+05:45"  # [P] HiRISK
+  calibrationTag: "[D] calibrated on 26 August 2026 – out-of-sample test on 8 Jul 2025 pending"
+  points:
+    - site: BTW-S
+      travelTimeMinEarliest: 36  # [D]
+      travelTimeMinLatest: 46    # [D]
+    - site: MLB
+      travelTimeMinEarliest: 146 # [D]
+      travelTimeMinLatest: 179   # [D]
+    - site: MUG
+      travelTimeMinEarliest: 241 # [D]/[A]
+      travelTimeMinLatest: 271   # [D]/[A]
+    - site: DVS
+      travelTimeMinEarliest: 286 # [A]
+      travelTimeMinLatest: 346   # [A]

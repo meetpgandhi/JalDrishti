@@ -1,0 +1,7 @@
+{
+  "version": "1.0",
+  "project": "JalDrishti",
+  "buildTool": "maven",
+  "architecture": "hexagonal",
+  "specFile": "JalDrishti v3 — Flash-Flood Warning-to-Action System Specification & Simulation Plan.md"
+}

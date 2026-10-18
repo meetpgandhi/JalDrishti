@@ -1,0 +1,61 @@
+# Scenario S5: Monsoon Rise
+# Proves: Rain floods follow the normal path; no false NON_RAIN tag.
+# Pass: WATCH at 7.3m; no WARNING below 9.0m; no R6/NON_RAIN tag fires.
+#
+# See spec Section 11 / S5.
+
+scenario: monsoon-rise
+version: 1
+corridor: bhote-trishuli-narayani
+configVersion: 1
+start: "2026-08-26T00:00:00+05:45"
+end:   "2026-08-26T05:00:00+05:45"
+seed: 21
+
+variants:
+  graceMinutes: 3   # [A]
+
+speedProfile:
+  - {from: "00:00", to: "02:50", speed: 120}
+  - {from: "02:50", to: "03:30", speed: 5}   # DVG approaches and crosses warning level
+  - {from: "03:30", to: "05:00", speed: 30}
+
+bookmarks:
+  - {at: "03:20", label: "DVG crosses 7.3m warning level — WATCH expected"}
+
+stations:
+  RSW:
+    generator: {model: flat, level: 1.5, noiseSd: 0.01, tag: A}
+  SYP:
+    generator: {model: flat, level: 4.2, noiseSd: 0.01, tag: A}
+  BTW:
+    generator: {model: flat, level: 3.0, noiseSd: 0.01, tag: A}
+  GLC:
+    generator: {model: flat, level: 5.5, noiseSd: 0.02, tag: A}
+  MLK:
+    generator: {model: flat, level: 4.5, noiseSd: 0.01, tag: A}
+  DVG:
+    # Rain-driven rise: ~0.15m/10min reaching 7.45m at 03:20 [A]
+    generator:
+      model: hydrograph
+      base: 4.6
+      riseStart: "00:30"
+      peak: {t: "03:20", level: 7.45, tag: A}
+      mustStayBelow: 9.0   # must NOT cross danger [P] 9.0m
+      tag: A
+
+weather:
+  catchmentRainMm3h: {value: 35, tag: A}   # heavy monsoon rain → R6 must NOT fire
+
+passCriteria:
+  - type: WATCH_AT_STATION
+    stationId: DVG
+    triggerLevel: 7.3      # warning level [P]
+    expectedRule: R1
+    description: "WATCH when DVG crosses 7.3m (R1)"
+  - type: NO_WARNING_BELOW_DANGER
+    stationId: DVG
+    dangerLevel: 9.0       # [P]
+    description: "No WARNING until DVG crosses 9.0m danger level"
+  - type: NO_NON_RAIN_TAG
+    description: "R6 must not fire when catchment rain >= 5mm/3h"

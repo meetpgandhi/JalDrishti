@@ -1,0 +1,12 @@
+# Golden incident_event sequence for S1: 26 Aug as-happened
+# (Syaphrubesi lost by 08:40 variant, grace 3 min)
+#
+# This file is populated by a CI run after Sprint 1 is complete.
+# Once committed, every subsequent CI run diffs the actual sequence against this file (NFR-05).
+# Gemini message text is EXCLUDED from the diff — only rule firings and level changes are compared.
+#
+# Format: one JSON object per line (JSONL)
+# Fields: seq, incident_id (masked as "INC-1"), at (sim time), type, rule_id, payload summary
+#
+# PLACEHOLDER — replace after first successful S1 run in CI
+{"seq":1,"incident_id":"INC-1","at":"2026-08-26T08:53:00+05:45","type":"OPENED","rule_id":"R5","payload":{"level":"WARNING","anchorStation":"RSW","silentStations":["RSW","SYP"],"configVersion":1}}

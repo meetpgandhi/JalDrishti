@@ -1,0 +1,32 @@
+# application-live.yml — Live (production) profile
+#
+# In live mode:
+#   - Real java.time.Clock is used
+#   - Cloud Scheduler calls /internal/sweep and /internal/escalate every minute
+#   - Real Google Cloud Pub/Sub (GOOGLE_CLOUD_PROJECT must be set)
+#   - Cloud SQL PostgreSQL via Cloud SQL Auth Proxy or socket
+#   - Gemini on Vertex AI (asia-south1)
+#   - CAP messages can use status: Actual (set cap.status-override: Actual)
+
+spring:
+  datasource:
+    url: ${SPRING_DATASOURCE_URL}      # injected by Cloud Run / Secret Manager
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: false
+
+jaldrishti:
+  sim:
+    enabled: false
+  cap:
+    status-override: Actual   # live production — real CAP alerts
+    gateway-url: ${CAP_GATEWAY_URL}
+
+logging:
+  level:
+    org.jaldrishti: INFO
+    org.flywaydb: INFO

@@ -1,0 +1,23 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: jaldrishti-core
+  profiles:
+    active: sim
+
+jaldrishti:
+  corridor:
+    name: "Bhote Koshi - Trishuli - Narayani"
+    reporting-cadence-minutes: 10
+    grace-before-silent-minutes: 3
+    silence-sweep-interval-seconds: 60
+    cascade-min-velocity-mps: 3.0
+    cascade-max-velocity-mps: 35.0
+  gemini:
+    model: gemini-3.6-flash
+    region: asia-south1
+    location: asia-south1
+    temperature: 0.0
+    vertex-enabled: ${VERTEX_ENABLED:false}

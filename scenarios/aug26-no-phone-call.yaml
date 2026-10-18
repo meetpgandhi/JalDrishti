@@ -1,0 +1,96 @@
+# Scenario S2: 26 August 2026 — No Phone Call (Counterfactual)
+# Same as S1 but with phoneCallAt0900: false.
+# Proves: JalDrishti WARNING is unchanged; the as-happened track shows NOTHING
+#         until Malekhu crosses a threshold at 11:20–11:43.
+#
+# This answers "what if the Dhunche observer had been away from their phone?"
+#
+# See spec Section 11 / S2.
+
+scenario: aug26-no-phone-call
+version: 1
+corridor: bhote-trishuli-narayani
+configVersion: 1
+start: "2026-08-26T08:00:00+05:45"
+end:   "2026-08-26T16:30:00+05:45"
+seed: 42
+
+variants:
+  syaphrubesiLastReading: "08:40"   # [P]
+  malekhuCrossing: "11:20"          # [P]
+  graceMinutes: 3                   # [A]
+  phoneCallAt0900: false            # THIS is the counterfactual — no phone call
+
+speedProfile:
+  - {from: "08:00", to: "08:36", speed: 60}
+  - {from: "08:36", to: "09:05", speed: 2}
+  - {from: "09:05", to: "11:05", speed: 120}
+  - {from: "11:05", to: "11:45", speed: 10}
+  - {from: "11:45", to: "16:30", speed: 240}
+
+bookmarks:
+  - {at: "08:50", label: "Two gauges go dark"}
+  - {at: "08:53", label: "JalDrishti WARNING"}
+  - {at: "11:20", label: "First automated threshold crossed (as-happened track)"}
+
+stations:
+  RSW:
+    generator: {model: flat, level: 1.65, trendPer10Min: -0.01, noiseSd: 0.01, tag: A}
+    pinned:
+      - {t: "08:40", level: 1.62, tag: P, src: "nepalitimes / scienceblog"}
+    outage: {fromSlot: "08:50", reason: DESTROYED, tag: P}
+  SYP:
+    generator: {model: flat, level: 3.78, noiseSd: 0.01, tag: A}
+    pinned:
+      - {t: "08:40", level: 3.80, tag: P, src: "spotlight-nepal"}
+    outage: {afterLastPinned: true, reason: DESTROYED, tag: P}
+  BTW:
+    generator: {model: flat, level: 3.52, noiseSd: 0.01, tag: A}
+    pinned:
+      - {t: "09:20", level: 3.55, tag: P, src: "linkedin-sensor-installer"}
+    outage: {fromSlot: "09:30", reason: DESTROYED, tag: P}
+  GLC:
+    generator: {model: flat, level: 5.0, noiseSd: 0.02, tag: A}
+  MLK:
+    generator:
+      model: hydrograph
+      base: 4.0
+      jumpAt: "${variants.malekhuCrossing}"
+      jumpM: 4.0
+      peakAfterMin: 40
+      recessionHalfLifeMin: 90
+      tag: A
+  DVG:
+    generator:
+      model: hydrograph
+      base: 4.6
+      riseStart: "14:00"
+      peak: {t: "16:00", level: 6.57, tag: P, src: "scienceblog / nepalitimes"}
+      mustStayBelow: 7.3
+      tag: A
+
+weather:
+  catchmentRainMm3h: {value: 0, tag: P, src: "smartwatermagazine"}
+
+# No events: phoneCallAt0900 = false means the FIELD_REPORT at 09:00 is suppressed
+
+# As-happened counterfactual: without the phone call, the first automated
+# signal on the existing network was Malekhu crossing its threshold [D]
+asHappened:
+  - {t: "11:20", label: "First automated threshold (Malekhu) — no prior warning", tag: P}
+  - {t: "11:43", label: "Malekhu variant upper bound", tag: P}
+
+groundTruthArrivals:
+  BTW-S: {from: "09:20", to: "09:30", tag: P}
+  MLB:   {from: "11:10", to: "11:43", tag: P}
+  MUG:   {at: "13:00", toleranceMin: 15, tag: P}
+
+passCriteria:
+  - type: WARNING_AT
+    expectedAt: "08:53"
+    toleranceMin: 1
+    triggerRule: R5
+    description: "JalDrishti WARNING still fires at 08:53 without the phone call"
+  - type: AS_HAPPENED_NO_WARNING_BEFORE
+    time: "11:20"
+    description: "The as-happened track has no automated warning before Malekhu (11:20)"

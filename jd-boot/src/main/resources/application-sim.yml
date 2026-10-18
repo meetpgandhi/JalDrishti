@@ -1,0 +1,33 @@
+# application-sim.yml — Simulation profile
+# Active by default (see application.yml: spring.profiles.active: sim)
+#
+# In sim mode:
+#   - SimClock replaces java.time.Clock
+#   - SimScheduler replaces Cloud Scheduler (calls /internal/sweep and /internal/escalate)
+#   - Pub/Sub uses the emulator (PUBSUB_EMULATOR_HOST env var)
+#   - PostgreSQL uses an in-memory Testcontainers instance (for tests) or a local Docker DB
+#   - Gemini calls are still real; set GOOGLE_CLOUD_PROJECT to use them
+#   - CAP messages use status: Exercise (enforced in jd-adapter-cap)
+
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/jaldrishti_dev
+    username: jaldrishti
+    password: ${DB_PASSWORD:jaldrishti_dev}  # override via env in production
+    driver-class-name: org.postgresql.Driver
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: false
+
+jaldrishti:
+  sim:
+    enabled: true
+    pubsub-emulator-host: ${PUBSUB_EMULATOR_HOST:localhost:8085}
+  cap:
+    status-override: Exercise   # always Exercise in sim — NEVER Actual
+
+logging:
+  level:
+    org.jaldrishti: DEBUG
+    org.flywaydb: INFO
