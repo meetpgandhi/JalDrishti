@@ -22,6 +22,10 @@ public interface CorridorConfigRepository {
 
     List<Site> findSites(String corridorId);
 
+    default List<Site> findSitesByCorridor(String corridorId) {
+        return findSites(corridorId);
+    }
+
     boolean isHeightenedWatchActive(String runId, String corridorId);
 
     void setHeightenedWatchActive(String runId, String corridorId, boolean active);

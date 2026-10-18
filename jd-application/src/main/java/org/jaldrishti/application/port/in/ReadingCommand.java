@@ -26,4 +26,16 @@ public record ReadingCommand(
         Objects.requireNonNull(source, "source must not be null");
         Objects.requireNonNull(tag, "tag must not be null");
     }
+
+    public ReadingCommand(
+            String runId,
+            String stationId,
+            Instant observedAt,
+            double levelM,
+            double rainMm,
+            String source,
+            AlertTag tag
+    ) {
+        this(runId, stationId, observedAt, levelM, rainMm, observedAt, source, tag);
+    }
 }

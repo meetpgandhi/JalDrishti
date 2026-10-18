@@ -72,7 +72,7 @@ public class FieldReportProcessor implements ProcessFieldReportUseCase {
         // Fetch corridor gazetteer sites
         List<Site> gazetteer = Collections.emptyList();
         if (corridorConfigRepository != null) {
-            gazetteer = corridorConfigRepository.findSitesByCorridor("bhote-trishuli-narayani");
+            gazetteer = corridorConfigRepository.findSites("bhote-trishuli-narayani");
         }
 
         // Call Gemini parser
