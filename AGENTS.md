@@ -17,6 +17,7 @@ Every AI agent MUST read these before writing any code:
 | [`docs/SPRINT_LOG.md`](docs/SPRINT_LOG.md) | Session-by-session log of what was built | When you need full context |
 | [`docs/DECISIONS.md`](docs/DECISIONS.md) | Architecture Decision Records (10 ADRs) | Before any architectural change |
 | [`docs/DEV_SETUP.md`](docs/DEV_SETUP.md) | Local setup, env vars, CI pipeline | When setting up or troubleshooting |
+| [`docs/DEPLOY.md`](docs/DEPLOY.md) | Exact Cloud Run deploy/redeploy commands for this project's real GCP setup | Before any deploy or production config change |
 
 **Update `docs/PROGRESS.md` and `docs/SPRINT_LOG.md` at the end of every session.**
 
