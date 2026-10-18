@@ -6,6 +6,12 @@ spring:
     name: jaldrishti-core
   profiles:
     active: sim
+  mvc:
+    async:
+      # Matches SseEmitter's own 30-min timeout in SseStreamController. Without this,
+      # Spring MVC/Tomcat's much shorter default async timeout (~30s) cuts the SSE
+      # stream before the emitter's own timeout, silently killing live console updates.
+      request-timeout: 1800000
 
 jaldrishti:
   corridor:
