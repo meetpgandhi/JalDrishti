@@ -8,15 +8,14 @@ COPY console/package*.json ./
 RUN npm ci
 
 COPY console/ ./
-RUN npm run build
+# Build frontend directly to local dist directory
+RUN npx vite build --outDir dist
 
 # ─────────────────────────────────────────────────────────────
-# Stage 2: Build Maven Multi-Module Java Application
+# Stage 2: Build Maven Multi-Module Java Application (Temurin 21)
 # ─────────────────────────────────────────────────────────────
-FROM eclipse-temurin:21-jdk-alpine AS backend-builder
+FROM maven:3.9-eclipse-temurin-21-alpine AS backend-builder
 WORKDIR /app
-
-RUN apk add --no-cache maven
 
 # Copy POM definitions for dependency caching
 COPY pom.xml ./
@@ -44,7 +43,7 @@ COPY jd-sim/src ./jd-sim/src
 COPY jd-boot/src ./jd-boot/src
 
 # Inject built static frontend into Spring Boot resources
-COPY --from=frontend-builder /app/jd-boot/src/main/resources/static ./jd-boot/src/main/resources/static
+COPY --from=frontend-builder /app/console/dist ./jd-boot/src/main/resources/static
 
 # Build production executable uber-jar without running tests during image packaging
 RUN mvn clean package -DskipTests
@@ -58,12 +57,13 @@ WORKDIR /app
 # Add unprivileged system user for cloud security compliance
 RUN addgroup -S jaldrishti && adduser -S jaldrishti -G jaldrishti
 
-COPY --from=backend-builder --chown=jaldrishti:jaldrishti /app/jd-boot/target/jd-boot-*.jar /app/app.jar
+# Copy explicit boot jar (avoiding wildcard issues)
+COPY --from=backend-builder --chown=jaldrishti:jaldrishti /app/jd-boot/target/jd-boot-0.1.0-SNAPSHOT.jar /app/app.jar
 
 USER jaldrishti
 
 ENV PORT=8080
-ENV SPRING_PROFILES_ACTIVE=live
+ENV SPRING_PROFILES_ACTIVE=sim
 ENV JAVA_OPTS="-XX:+UseZGC -XX:MaxRAMPercentage=75.0 -Djava.security.egd=file:/dev/./urandom"
 
 EXPOSE 8080

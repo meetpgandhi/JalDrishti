@@ -37,7 +37,7 @@ gcloud services enable \
   aiplatform.googleapis.com \
   secretmanager.googleapis.com \
   cloudscheduler.googleapis.com \
-  cloudlogging.googleapis.com \
+  logging.googleapis.com \
   cloudtrace.googleapis.com \
   --project="$PROJECT_ID"
 
