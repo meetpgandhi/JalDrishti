@@ -112,7 +112,7 @@ public class GeminiMessageLocaliser implements GeminiMessageLocaliserPort {
             String deadlineStr,
             String actionCode,
             String ref
-    ) throws java.io.IOException {
+    ) throws Exception {
         Client client = Client.builder()
                 .vertexAI(true)
                 .location(location)

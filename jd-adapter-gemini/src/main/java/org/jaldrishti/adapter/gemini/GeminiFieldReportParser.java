@@ -58,7 +58,7 @@ public class GeminiFieldReportParser implements GeminiFieldReportParserPort {
         return parseHeuristically(report, gazetteer);
     }
 
-    private String callGeminiVertex(String rawText, List<Site> gazetteer) throws java.io.IOException {
+    private String callGeminiVertex(String rawText, List<Site> gazetteer) throws Exception {
         Client client = Client.builder()
                 .vertexAI(true)
                 .location(location)
