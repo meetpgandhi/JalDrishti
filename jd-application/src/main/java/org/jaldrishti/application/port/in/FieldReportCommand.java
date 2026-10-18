@@ -6,12 +6,13 @@ import org.jaldrishti.domain.Language;
 import org.jaldrishti.domain.SenderTrust;
 
 import java.time.Instant;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
 /**
- * Command representing an incoming parsed field report to be evaluated by the trigger engine.
+ * Command representing an incoming raw or parsed field report to be processed and evaluated.
  */
 public record FieldReportCommand(
         UUID reportId,
@@ -20,6 +21,8 @@ public record FieldReportCommand(
         String senderHash,
         SenderTrust trust,
         String channel,
+        String audioUri,
+        String rawText,
         Language language,
         String transcript,
         String translationEn,
@@ -38,6 +41,37 @@ public record FieldReportCommand(
         Objects.requireNonNull(receivedAt, "receivedAt must not be null");
         Objects.requireNonNull(senderHash, "senderHash must not be null");
         Objects.requireNonNull(trust, "trust must not be null");
-        Objects.requireNonNull(hazardType, "hazardType must not be null");
+    }
+
+    public FieldReportCommand(
+            String runId,
+            Instant receivedAt,
+            String senderHash,
+            SenderTrust trust,
+            String channel,
+            String audioUri,
+            String rawText
+    ) {
+        this(
+                UUID.randomUUID(),
+                runId != null ? runId : "sim",
+                receivedAt != null ? receivedAt : Instant.now(),
+                senderHash != null ? senderHash : "anonymous",
+                trust != null ? trust : SenderTrust.OBSERVER,
+                channel != null ? channel : "web",
+                audioUri,
+                rawText,
+                Language.ne,
+                rawText != null ? rawText : "",
+                rawText != null ? rawText : "",
+                null,
+                null,
+                HazardType.UNCLEAR,
+                Collections.emptyList(),
+                receivedAt != null ? receivedAt : Instant.now(),
+                null,
+                0.8,
+                false
+        );
     }
 }

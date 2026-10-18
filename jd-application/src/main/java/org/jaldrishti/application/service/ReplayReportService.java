@@ -84,7 +84,7 @@ public class ReplayReportService implements GenerateReplayReportUseCase {
                     timeNpt,
                     ev.type().name(),
                     ev.ruleId(),
-                    ev.payload(),
+                    ev.payloadJson(),
                     ev.tag()
             ));
 

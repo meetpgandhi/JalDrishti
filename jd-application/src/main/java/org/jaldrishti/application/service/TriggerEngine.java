@@ -380,6 +380,13 @@ public class TriggerEngine implements
                 command.needsCallback()
         );
 
+        handleFieldReport(report);
+    }
+
+    @Override
+    public void handleFieldReport(FieldReportObservation report) {
+        Objects.requireNonNull(report, "report must not be null");
+
         String corridorId = "bhote-trishuli-narayani"; // Default pilot corridor
         CorridorConfig config = corridorConfigRepository.findCurrent(corridorId)
                 .orElse(CorridorConfig.defaultConfig());
@@ -387,13 +394,13 @@ public class TriggerEngine implements
         // Rule R7: Trusted Report (OFFICIAL)
         RuleResult r7Result = R7TrustedReportRule.evaluate(report, config);
         if (r7Result.fired()) {
-            raiseOrUpdateIncident(command.runId(), corridorId, IncidentLevel.WARNING, "R7",
-                    r7Result.description(), r7Result.evidence(), report.locationId(), config.version(), false, command.receivedAt());
+            raiseOrUpdateIncident(report.runId(), corridorId, IncidentLevel.WARNING, "R7",
+                    r7Result.description(), r7Result.evidence(), report.locationId(), config.version(), false, report.receivedAt());
             return;
         }
 
         // Rule R8: Observer Reports
-        Optional<Incident> openIncidentOpt = incidentRepository.findOpenIncident(command.runId(), corridorId);
+        Optional<Incident> openIncidentOpt = incidentRepository.findOpenIncident(report.runId(), corridorId);
         boolean sensorEvidencePresent = openIncidentOpt.isPresent();
 
         Map<String, Site> sitesById = new HashMap<>();
@@ -403,8 +410,8 @@ public class TriggerEngine implements
 
         RuleResult r8Result = R8ObserverRule.evaluate(report, Collections.emptyList(), sitesById, sensorEvidencePresent, config);
         if (r8Result.fired()) {
-            raiseOrUpdateIncident(command.runId(), corridorId, IncidentLevel.WARNING, "R8",
-                    r8Result.description(), r8Result.evidence(), report.locationId(), config.version(), false, command.receivedAt());
+            raiseOrUpdateIncident(report.runId(), corridorId, IncidentLevel.WARNING, "R8",
+                    r8Result.description(), r8Result.evidence(), report.locationId(), config.version(), false, report.receivedAt());
         }
     }
 
