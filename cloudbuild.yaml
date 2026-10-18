@@ -37,7 +37,7 @@ steps:
       - '--memory=2Gi'
       - '--min-instances=1'
       - '--max-instances=10'
-      - '--set-env-vars=SPRING_PROFILES_ACTIVE=sim,JALDRISHTI_GEMINI_LOCATION=asia-south1,JALDRISHTI_GEMINI_MODEL=gemini-3.6-flash,JALDRISHTI_GEMINI_VERTEX_ENABLED=false'
+      - '--update-env-vars=SPRING_PROFILES_ACTIVE=sim,JALDRISHTI_GEMINI_LOCATION=asia-south1,JALDRISHTI_GEMINI_MODEL=gemini-3.6-flash,JALDRISHTI_GEMINI_VERTEX_ENABLED=false'
     id: 'deploy-cloud-run'
 
 substitutions:
