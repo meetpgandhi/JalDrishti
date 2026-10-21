@@ -90,6 +90,7 @@ public class ScenarioRunEngine implements ManageSimulationUseCase {
         final List<SpeedBandWindow> speedBands;
         int cursor = 0;
         volatile String status = "RUNNING";
+        volatile Double manualSpeed = null;
 
         RunContext(String runId, Scenario scenario, Instant startInstant, Instant endInstant,
                    List<ScheduledItem> schedule, List<SpeedBandWindow> speedBands) {
@@ -166,6 +167,7 @@ public class ScenarioRunEngine implements ManageSimulationUseCase {
 
     public synchronized RunSnapshot setSpeed(String runId, double speed) {
         if (current != null && current.runId.equals(runId)) {
+            current.manualSpeed = speed;
             clock.setSpeed(speed);
             return snapshotOf(current);
         }
@@ -215,14 +217,20 @@ public class ScenarioRunEngine implements ManageSimulationUseCase {
 
         Instant now = clock.instant();
 
-        double desiredSpeed = speedAt(ctx.speedBands, now);
+        double desiredSpeed = ctx.manualSpeed != null ? ctx.manualSpeed : speedAt(ctx.speedBands, now);
         if (Math.abs(desiredSpeed - clock.getSpeed()) > 1e-9) {
             clock.setSpeed(desiredSpeed);
         }
 
         while (ctx.cursor < ctx.schedule.size() && !ctx.schedule.get(ctx.cursor).at().isAfter(now)) {
-            processItem(ctx, ctx.schedule.get(ctx.cursor));
-            ctx.cursor++;
+            ScheduledItem item = ctx.schedule.get(ctx.cursor);
+            try {
+                processItem(ctx, item);
+            } catch (Exception e) {
+                System.err.println("Error processing scenario item at " + item.at() + ": " + e.getMessage());
+            } finally {
+                ctx.cursor++;
+            }
         }
 
         if (simScheduler != null) {

@@ -1,119 +1,61 @@
 import { ref, onMounted, onUnmounted, watch, type Ref } from 'vue'
+import { endpoints } from '@/lib/api'
 
-export interface SseOptions {
-  runId?: string | Ref<string | null | undefined>
-  onReading?: (data: any) => void
-  onStationState?: (data: any) => void
-  onIncident?: (data: any) => void
-  onBands?: (data: any) => void
-  onClock?: (data: any) => void
-  onError?: (err: Event) => void
+// Live stream from GET /api/v1/stream?runId=. Event names sent by the backend:
+// connected, reading, station-state, clock, incident (OPENED / LEVEL_CHANGED / STOOD_DOWN),
+// evidence (EVIDENCE_ADDED), bands (either ArrivalBand[] or a BANDS_UPDATED incident event).
+export interface SseHandlers {
+  onReading?: (data: unknown) => void
+  onStationState?: (data: unknown) => void
+  onClock?: (data: unknown) => void
+  onIncident?: (data: unknown) => void
+  onEvidence?: (data: unknown) => void
+  onBands?: (data: unknown) => void
 }
 
-/**
- * Composable for connecting to the JalDrishti SSE event stream (/api/v1/stream).
- * Automatically reconnects and dispatches typed platform events.
- */
-export function useSSE(options: SseOptions) {
+export function useSSE(runId: Ref<string | null>, handlers: SseHandlers) {
   const isConnected = ref(false)
-  const lastEventId = ref<string | null>(null)
-  let eventSource: EventSource | null = null
+  let source: EventSource | null = null
 
-  const resolveRunId = () => {
-    const r = options.runId
-    const value = typeof r === 'string' ? r : r?.value
-    return value || 'live'
+  const listen = (name: string, handler?: (data: unknown) => void) => {
+    source?.addEventListener(name, (e: Event) => {
+      isConnected.value = true
+      if (!handler) return
+      try {
+        handler(JSON.parse((e as MessageEvent<string>).data))
+      } catch {
+        /* ignore a malformed event rather than breaking the stream */
+      }
+    })
   }
 
   const connect = () => {
-    const runId = resolveRunId()
-    const url = `/api/v1/stream?runId=${encodeURIComponent(runId)}`
-
-    eventSource = new EventSource(url)
-
-    eventSource.onopen = () => {
-      isConnected.value = true
-    }
-
-    eventSource.onerror = (err) => {
-      isConnected.value = false
-      if (options.onError) {
-        options.onError(err)
-      }
-    }
-
-    // Typed SSE event listeners
-    eventSource.addEventListener('connected', (e: MessageEvent) => {
-      lastEventId.value = e.lastEventId
-      isConnected.value = true
-    })
-
-    eventSource.addEventListener('reading', (e: MessageEvent) => {
-      lastEventId.value = e.lastEventId
-      if (options.onReading) {
-        options.onReading(JSON.parse(e.data))
-      }
-    })
-
-    eventSource.addEventListener('station-state', (e: MessageEvent) => {
-      lastEventId.value = e.lastEventId
-      if (options.onStationState) {
-        options.onStationState(JSON.parse(e.data))
-      }
-    })
-
-    eventSource.addEventListener('incident', (e: MessageEvent) => {
-      lastEventId.value = e.lastEventId
-      if (options.onIncident) {
-        options.onIncident(JSON.parse(e.data))
-      }
-    })
-
-    eventSource.addEventListener('bands', (e: MessageEvent) => {
-      lastEventId.value = e.lastEventId
-      if (options.onBands) {
-        options.onBands(JSON.parse(e.data))
-      }
-    })
-
-    eventSource.addEventListener('clock', (e: MessageEvent) => {
-      lastEventId.value = e.lastEventId
-      if (options.onClock) {
-        options.onClock(JSON.parse(e.data))
-      }
-    })
+    source = new EventSource(endpoints.stream(runId.value ?? 'live'))
+    source.onopen = () => { isConnected.value = true }
+    source.onerror = () => { isConnected.value = false } // EventSource retries by itself
+    listen('connected')
+    listen('reading', handlers.onReading)
+    listen('station-state', handlers.onStationState)
+    listen('clock', handlers.onClock)
+    listen('incident', handlers.onIncident)
+    listen('evidence', handlers.onEvidence)
+    listen('bands', handlers.onBands)
   }
 
   const disconnect = () => {
-    if (eventSource) {
-      eventSource.close()
-      eventSource = null
-      isConnected.value = false
+    source?.close()
+    source = null
+    isConnected.value = false
+  }
+
+  onMounted(connect)
+  onUnmounted(disconnect)
+  watch(runId, (next, prev) => {
+    if (next !== prev) {
+      disconnect()
+      connect()
     }
-  }
-
-  onMounted(() => {
-    connect()
   })
 
-  onUnmounted(() => {
-    disconnect()
-  })
-
-  // Reconnect to the new run's stream whenever the run changes (e.g. after starting a replay).
-  if (options.runId && typeof options.runId !== 'string') {
-    watch(options.runId, (next, prev) => {
-      if (next !== prev) {
-        disconnect()
-        connect()
-      }
-    })
-  }
-
-  return {
-    isConnected,
-    lastEventId,
-    connect,
-    disconnect
-  }
+  return { isConnected }
 }

@@ -1,0 +1,135 @@
+{
+  "version": 1,
+  "corridorId": "bhote-trishuli-narayani",
+  "travelTime": [[0, 0, 0], [38, 36, 46], [100, 146, 179], [132, 241, 271], [168, 286, 346]],
+  "travelTimeTag": "D",
+  "travelTimeSource": "Same calibration as the backend ArrivalTimeCalculator (26 Aug front speeds, spec section 4)",
+  "sites": [
+    {
+      "id": "TIM", "name": "Timure", "riverKm": 3, "riverKmTag": "A",
+      "severity": "high", "severityNote": "Destroyed again after rebuilding from the 2025 flood (GlobalGiving report, cited in the spec)",
+      "minutesToSafety": [3, 10],
+      "channels": { "siren": false, "volunteers": false, "dutyCall": true },
+      "groups": [
+        { "kind": "residents", "low": 100, "best": 250, "high": 500, "presence": "always", "tag": "A", "source": "Placeholder until counted from OpenStreetMap buildings" },
+        { "kind": "travellers", "low": 20, "best": 80, "high": 200, "presence": "daytime", "tag": "A", "source": "Border and customs traffic, placeholder" }
+      ]
+    },
+    {
+      "id": "RHP", "name": "Rasuwagadhi HPP (111 MW)", "riverKm": 5, "riverKmTag": "A",
+      "severity": "high", "severityNote": "Powerhouse and substation reported destroyed (SANDRP, cited in the spec)",
+      "minutesToSafety": [5, 15],
+      "channels": { "siren": false, "volunteers": false, "dutyCall": true },
+      "groups": [
+        { "kind": "workers", "low": 30, "best": 80, "high": 200, "presence": "dayShift", "tag": "A", "source": "Ask the operator for the real shift headcount" }
+      ]
+    },
+    {
+      "id": "SYB", "name": "Syaphrubesi", "riverKm": 15, "riverKmTag": "P",
+      "severity": "high", "severityNote": "Over 240 buildings destroyed in one mapped area (Copernicus)",
+      "minutesToSafety": [3, 12],
+      "channels": { "siren": false, "volunteers": false, "dutyCall": true },
+      "groups": [
+        { "kind": "residents", "low": 1050, "best": 1500, "high": 2500, "presence": "always", "tag": "D", "source": "Low = 240 destroyed buildings (Copernicus) × 4.37 people per household (Census 2021); best and high are assumptions" },
+        { "kind": "students", "low": 100, "best": 300, "high": 600, "presence": "schoolHours", "tag": "A", "source": "Placeholder until the school roll is entered" },
+        { "kind": "travellers", "low": 50, "best": 200, "high": 500, "presence": "daytime", "tag": "A", "source": "Langtang trekkers and drivers; many carry foreign SIMs (ThePrint)" }
+      ]
+    },
+    {
+      "id": "UT1", "name": "Upper Trishuli-1 (construction)", "riverKm": 25, "riverKmTag": "A",
+      "severity": "high", "severityNote": "Site destroyed (SANDRP, cited in the spec)",
+      "minutesToSafety": [5, 15],
+      "channels": { "siren": false, "volunteers": false, "dutyCall": true },
+      "groups": [
+        { "kind": "workers", "low": 200, "best": 500, "high": 900, "presence": "dayShift", "tag": "A", "source": "About 900 hydropower workers were among the missing corridor-wide (Smart Water Magazine); site share assumed" }
+      ]
+    },
+    {
+      "id": "MLG", "name": "Mailung HEP", "riverKm": 30, "riverKmTag": "A",
+      "severity": "high", "severityNote": "Upper gorge; a bridge crew there ran after an SMS (ThePrint)",
+      "minutesToSafety": [5, 15],
+      "channels": { "siren": false, "volunteers": false, "dutyCall": true },
+      "groups": [
+        { "kind": "workers", "low": 30, "best": 80, "high": 150, "presence": "dayShift", "tag": "A", "source": "Ask the operator for the real shift headcount" }
+      ]
+    },
+    {
+      "id": "BTW-S", "name": "Betrawati", "riverKm": 38, "riverKmTag": "P",
+      "severity": "medium", "severityNote": "Gauge lost 09:20–09:30; riverside houses and bridge exposed",
+      "minutesToSafety": [5, 15],
+      "channels": { "siren": false, "volunteers": false, "dutyCall": true },
+      "groups": [
+        { "kind": "residents", "low": 300, "best": 800, "high": 1500, "presence": "always", "tag": "A", "source": "Placeholder until counted from OpenStreetMap buildings" },
+        { "kind": "travellers", "low": 50, "best": 150, "high": 300, "presence": "daytime", "tag": "A", "source": "Pasang Lhamu Highway traffic, placeholder" }
+      ]
+    },
+    {
+      "id": "BID", "name": "Trishuli Bazaar / Bidur", "riverKm": 55, "riverKmTag": "A",
+      "severity": "medium", "severityNote": "About 60 houses swept away (ShareSansar)",
+      "minutesToSafety": [5, 15],
+      "channels": { "siren": false, "volunteers": false, "dutyCall": true },
+      "groups": [
+        { "kind": "residents", "low": 262, "best": 800, "high": 2000, "presence": "always", "tag": "D", "source": "Low = 60 swept houses (ShareSansar) × 4.37 (Census 2021); best and high are assumptions" },
+        { "kind": "students", "low": 900, "best": 1200, "high": 1643, "presence": "schoolHours", "tag": "P", "source": "About 900 students moved uphill at one school (Mongabay); 1,643 students evacuated (ShareSansar)" }
+      ]
+    },
+    {
+      "id": "TDH", "name": "Trishuli and Devighat HPPs", "riverKm": 57, "riverKmTag": "A",
+      "severity": "medium", "severityNote": "Damaged (ShareSansar)",
+      "minutesToSafety": [5, 15],
+      "channels": { "siren": false, "volunteers": false, "dutyCall": true },
+      "groups": [
+        { "kind": "workers", "low": 50, "best": 120, "high": 250, "presence": "dayShift", "tag": "A", "source": "Ask the operators for the real shift headcount" }
+      ]
+    },
+    {
+      "id": "GLB", "name": "Galchhi Bazaar", "riverKm": 88, "riverKmTag": "A",
+      "severity": "medium", "severityNote": "Marketplace damaged (Copernicus)",
+      "minutesToSafety": [5, 20],
+      "channels": { "siren": false, "volunteers": false, "dutyCall": true },
+      "groups": [
+        { "kind": "residents", "low": 300, "best": 700, "high": 1500, "presence": "always", "tag": "A", "source": "Placeholder until counted from OpenStreetMap buildings" },
+        { "kind": "travellers", "low": 100, "best": 300, "high": 600, "presence": "daytime", "tag": "A", "source": "Prithvi Highway junction traffic, placeholder" }
+      ]
+    },
+    {
+      "id": "MLB", "name": "Malekhu", "riverKm": 100, "riverKmTag": "P",
+      "severity": "medium", "severityNote": "Danger level crossed 11:20–11:43",
+      "minutesToSafety": [5, 20],
+      "channels": { "siren": false, "volunteers": false, "dutyCall": true },
+      "groups": [
+        { "kind": "residents", "low": 300, "best": 800, "high": 1800, "presence": "always", "tag": "A", "source": "Placeholder until counted from OpenStreetMap buildings" },
+        { "kind": "travellers", "low": 100, "best": 400, "high": 800, "presence": "daytime", "tag": "A", "source": "Prithvi Highway traffic, placeholder" }
+      ]
+    },
+    {
+      "id": "MUG", "name": "Mugling", "riverKm": 132, "riverKmTag": "A",
+      "severity": "low", "severityNote": "Flood arrived around 13:00",
+      "minutesToSafety": [5, 20],
+      "channels": { "siren": false, "volunteers": false, "dutyCall": true },
+      "groups": [
+        { "kind": "residents", "low": 200, "best": 600, "high": 1200, "presence": "always", "tag": "A", "source": "Placeholder until counted from OpenStreetMap buildings" },
+        { "kind": "travellers", "low": 200, "best": 500, "high": 1000, "presence": "daytime", "tag": "A", "source": "Highway junction traffic, placeholder" }
+      ]
+    },
+    {
+      "id": "DVS", "name": "Devghat", "riverKm": 168, "riverKmTag": "P",
+      "severity": "low", "severityNote": "Peak 6.57 m, below the 7.3 m warning level",
+      "minutesToSafety": [5, 20],
+      "channels": { "siren": false, "volunteers": false, "dutyCall": true },
+      "groups": [
+        { "kind": "residents", "low": 100, "best": 400, "high": 1000, "presence": "always", "tag": "A", "source": "Placeholder until counted from OpenStreetMap buildings" },
+        { "kind": "travellers", "low": 50, "best": 200, "high": 1000, "presence": "daytime", "tag": "A", "source": "Pilgrims at the confluence, placeholder" }
+      ]
+    }
+  ],
+  "sources": [
+    { "id": "graham1999", "title": "Graham (1999), A Procedure for Estimating Loss of Life Caused by Dam Failure, US Bureau of Reclamation DSO-99-06", "url": "https://www.usbr.gov/ssle/damsafety/TechDev/DSOTechDev/DSO-99-06.pdf" },
+    { "id": "lifesim", "title": "HEC-LifeSim user's manual (warning, mobilisation and evacuation structure)", "url": "https://www.hec.usace.army.mil/publications/ComputerProgramDocumentation/CPD-97_Aug2019.pdf" },
+    { "id": "mongabay", "title": "Mongabay (Sep 2026): community-based warning saves lives during Nepal floods", "url": "https://india.mongabay.com/2026/09/community-based-warning-saves-lives-during-nepal-floods/" },
+    { "id": "theprint", "title": "ThePrint: No sirens, just scrambling — the uneven reality of Nepal's early warning systems", "url": "https://theprint.in/ground-reports/no-sirens-just-scrambling-the-uneven-reality-of-nepals-early-warning-systems/3030423/" },
+    { "id": "census2021", "title": "2021 Nepal census (29,164,578 people in 6,666,937 households = 4.37 per household)", "url": "https://en.wikipedia.org/wiki/2021_Nepal_census" },
+    { "id": "copernicus", "title": "Copernicus Global Flood Monitoring: floods in Nepal and Tibet, August 2026", "url": "https://global-flood.emergency.copernicus.eu/news/259-floods-in-nepal-and-tibet-august-2026/" },
+    { "id": "sharesansar", "title": "ShareSansar: flood sweeps away around 60 houses in Trishuli Bazaar", "url": "https://www.sharesansar.com/newsdetail/flood-from-rasuwa-sweeps-away-around-60-houses-in-nuwakots-trishuli-bazaar-damage-to-hydroelectric-power-2026-08-26" }
+  ]
+}

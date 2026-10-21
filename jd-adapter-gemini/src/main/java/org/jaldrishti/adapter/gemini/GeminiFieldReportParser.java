@@ -179,10 +179,11 @@ public class GeminiFieldReportParser implements GeminiFieldReportParserPort {
             hazardType = HazardType.NO_HAZARD;
             confidence = 0.95;
         } else {
-            // General matching against gazetteer
             if (gazetteer != null) {
                 for (Site s : gazetteer) {
-                    if (text.contains(s.nameNe()) || text.toLowerCase().contains(s.nameEn().toLowerCase())) {
+                    boolean matchNe = s.nameNe() != null && !s.nameNe().isBlank() && text.contains(s.nameNe());
+                    boolean matchEn = s.nameEn() != null && !s.nameEn().isBlank() && text.toLowerCase().contains(s.nameEn().toLowerCase());
+                    if (matchNe || matchEn) {
                         locationId = s.id();
                         break;
                     }

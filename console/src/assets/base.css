@@ -1,0 +1,100 @@
+/* Reset, base elements and the few global utilities. Uses tokens only — no raw colours. */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { font-size: 16px; -webkit-text-size-adjust: 100%; }
+
+body {
+  font-family: var(--font-ui);
+  font-size: var(--fs-md);
+  line-height: var(--lh-normal);
+  color: var(--text);
+  background: var(--bg);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  font-feature-settings: 'cv11', 'ss01';
+}
+
+h1, h2, h3, h4 { font-weight: 600; line-height: var(--lh-tight); }
+
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; background: none; border: none; }
+button:disabled { cursor: not-allowed; }
+
+:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; border-radius: var(--r-sm); }
+
+input[type='text'], input[type='number'], select, textarea {
+  width: 100%;
+  background: var(--surface-2);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-sm);
+  padding: var(--sp-2) var(--sp-3);
+  font-size: var(--fs-md);
+  color: var(--text);
+}
+input::placeholder, textarea::placeholder { color: var(--text-3); }
+textarea { resize: vertical; min-height: 4.5rem; line-height: var(--lh-normal); }
+label { font-size: var(--fs-sm); color: var(--text-2); font-weight: 500; }
+
+table { width: 100%; border-collapse: collapse; }
+th {
+  text-align: left;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-3);
+  padding: var(--sp-2) var(--sp-3);
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+td {
+  padding: var(--sp-3);
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+  font-size: var(--fs-md);
+}
+
+/* Utilities */
+.mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.tabular { font-variant-numeric: tabular-nums; }
+.deva { font-family: var(--font-deva); font-size: var(--fs-deva); line-height: var(--lh-deva); }
+.text-2 { color: var(--text-2); }
+.text-3 { color: var(--text-3); }
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+}
+
+/* Diagonal stripes that mark simulation-only chrome. The only gradient in the app. */
+.sim-stripes {
+  background: repeating-linear-gradient(135deg, var(--sim-stripe-a) 0 12px, var(--sim-stripe-b) 12px 24px);
+}
+
+/* The only two looping animations allowed in the app */
+.live-dot {
+  display: inline-block; width: 8px; height: 8px; border-radius: var(--r-pill);
+  background: var(--ok); animation: live-dot 2s ease-in-out infinite;
+}
+.live-dot[data-state='off'] { background: var(--watch); animation: none; }
+@keyframes live-dot { 50% { opacity: 0.35; } }
+
+.skeleton {
+  background: var(--surface-3); border-radius: var(--r-sm);
+  animation: skeleton 1.4s ease-in-out infinite;
+}
+@keyframes skeleton { 50% { opacity: 0.5; } }
+
+/* One-shot attention flash for the status headline when the level changes */
+@keyframes level-flash { 0%, 100% { outline-color: transparent; } 50% { outline-color: var(--danger); } }
+
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: var(--r-pill); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}

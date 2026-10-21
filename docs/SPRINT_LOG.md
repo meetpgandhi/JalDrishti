@@ -345,3 +345,21 @@
 - No GCP/Vertex AI credentials available — Gemini enablement and `gemini-3.6-flash`/`asia-south1` model availability are unverified live.
 - Full visual redesign ("calm control-room instrument" design system, river schematic, phone page redesign), the Incident Commander agent, multimodal (voice/photo) evidence, Duty Matrix Studio (PDF → cited rules), Gemini Live conversational escalation, the AI activity drawer, and the actual Cloud Run deployment were **not** attempted — all are substantial standalone features/actions out of scope for this pass.
 
+
+---
+
+## Session: 2026-10-20 — Test green-up + sim-speed fix
+
+**Trigger:** User reported "simulation has so many bugs" and asked for a working app with all tests green.
+
+### Found and fixed
+- `ArrivalTimeCalculatorTest.galchhiArrivalBand`/`.malekhuArrivalBand` (the two pre-existing failures tracked as Known Issue #10) were test bugs, not calculator bugs: verified the interpolation by hand against the calibration points documented in `ArrivalTimeCalculator.defaultCorridorCurve()` — Galchhi's earliest arrival is `10:44` (test said `10:45`, a rounding slip) and Malekhu's latest arrival is `11:49` (test said `11:39`, a transposed digit — Malekhu km 100 is exactly the MLB calibration point at 179 min latest). Fixed the test expectations; `./mvnw test` is now green across all 10 modules (previously verified-green modules confirmed unaffected).
+- `console/vite.config.ts` carried a dev-only workaround (a 250ms loop re-POSTing the operator's chosen sim speed to the deployed Cloud Run backend, plus a `/clock` response override) for the exact bug the already-present `ScenarioRunEngine.manualSpeed` fix (uncommitted in the working tree, test `manualSpeedOverrideIsPreservedAcrossTicks` passing) resolves server-side. Left in place, it was redundant and risked fighting the real fix (continuously overriding speed even across pause/resume) while hitting production from every local dev session. Removed the speed-override and clock-override machinery; `/speed`, `/pause`, `/play`, `/runs` now fall through to the plain `/api` proxy. Kept the `/api/v1/messages` and `/api/v1/cap-messages` dev-only reconstruction (unrelated to speed) with an added comment explaining why it exists.
+
+### Investigated, not fixed (flagged instead of guessed)
+- `GET /api/v1/messages?runId=` and `GET /api/v1/cap-messages?runId=` — the console's types (`console/src/types/api.ts`) document these as real endpoints, but no controller anywhere implements them, and the `message`/`cap_message` tables have no `run_id` or recipient column to answer the query directly (a deputy-escalation message's true recipient diverges from `dispatched_action.duty_holder_id`, and `message`/`cap_message` only key off `dispatched_action_id`/`incident_id`). Building this for real needs a schema migration, not just a repository method, and I have no Docker/Postgres in this sandbox to verify a schema change against — tracked as Known Issue #14 rather than attempted blind.
+
+### Verified this session
+- `./mvnw test` (all 10 Maven modules, JDK 21.0.10 located on this machine at `C:\Program Files\Java\jdk-21.0.10`, `JAVA_HOME` was unset): `BUILD SUCCESS`, 0 failures, 0 errors.
+- `cd console && npm run type-check` and `npm run build`: clean, both before and after the `vite.config.ts` cleanup.
+- No Docker in this sandbox — the live app (Postgres + Pub/Sub emulator) could not be booted or click-tested; see Known Issue #12 (unchanged).

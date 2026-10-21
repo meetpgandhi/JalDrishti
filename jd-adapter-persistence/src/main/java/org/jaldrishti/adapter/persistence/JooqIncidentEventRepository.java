@@ -71,12 +71,12 @@ public class JooqIncidentEventRepository implements IncidentEventRepository {
     @Override
     public List<IncidentEvent> findByRunId(String runId) {
         return dsl.select(
-                        field("ie.seq"),
-                        field("ie.incident_id"),
-                        field("ie.at"),
-                        field("ie.type"),
-                        field("ie.rule_id"),
-                        field("ie.payload")
+                        field("ie.seq").as("seq"),
+                        field("ie.incident_id").as("incident_id"),
+                        field("ie.at").as("at"),
+                        field("ie.type").as("type"),
+                        field("ie.rule_id").as("rule_id"),
+                        field("ie.payload").as("payload")
                 )
                 .from(table("incident_event").as("ie"))
                 .join(table("incident").as("i"))

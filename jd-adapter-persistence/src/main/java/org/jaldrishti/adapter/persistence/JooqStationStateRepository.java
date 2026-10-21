@@ -53,6 +53,9 @@ public class JooqStationStateRepository implements StationStateRepository {
 
         OffsetDateTime silentSince = state.silentSince() != null
                 ? state.silentSince().atOffset(ZoneOffset.UTC) : null;
+        OffsetDateTime rateAlertAt = toOffset(state.rateAlertAt());
+        OffsetDateTime lastGood = toOffset(state.lastGoodReadingAt());
+        OffsetDateTime firstMissed = toOffset(state.firstMissedSlotAt());
         OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
 
         dsl.insertInto(table("station_state"))
@@ -63,6 +66,11 @@ public class JooqStationStateRepository implements StationStateRepository {
                         field("rate_flag"),
                         field("silent_since"),
                         field("outage_ticket"),
+                        field("rate_alert_at"),
+                        field("last_good_reading_at"),
+                        field("first_missed_slot_at"),
+                        field("last_reported_level_m"),
+                        field("last_reported_rain_mm"),
                         field("updated_at")
                 )
                 .values(
@@ -72,6 +80,11 @@ public class JooqStationStateRepository implements StationStateRepository {
                         state.rateAlert(),
                         silentSince,
                         state.outageTicket(),
+                        rateAlertAt,
+                        lastGood,
+                        firstMissed,
+                        state.lastReportedLevel(),
+                        state.lastReportedRain(),
                         now
                 )
                 .onConflict(field("run_id"), field("station_id"))
@@ -80,6 +93,11 @@ public class JooqStationStateRepository implements StationStateRepository {
                 .set(field("rate_flag"), state.rateAlert())
                 .set(field("silent_since"), silentSince)
                 .set(field("outage_ticket"), state.outageTicket())
+                .set(field("rate_alert_at"), rateAlertAt)
+                .set(field("last_good_reading_at"), lastGood)
+                .set(field("first_missed_slot_at"), firstMissed)
+                .set(field("last_reported_level_m"), state.lastReportedLevel())
+                .set(field("last_reported_rain_mm"), state.lastReportedRain())
                 .set(field("updated_at"), now)
                 .execute();
     }
@@ -97,16 +115,25 @@ public class JooqStationStateRepository implements StationStateRepository {
                 r.get("station_id", String.class),
                 band,
                 Boolean.TRUE.equals(rateFlag),
-                null,
-                null,
-                null,
+                instantOrNull(r, "rate_alert_at"),
+                instantOrNull(r, "last_good_reading_at"),
+                instantOrNull(r, "first_missed_slot_at"),
                 silentSince != null,
                 silentSince,
                 ticket != null,
                 ticket,
-                null,
-                null
+                r.get("last_reported_level_m", Double.class),
+                r.get("last_reported_rain_mm", Double.class)
         );
+    }
+
+    private static OffsetDateTime toOffset(Instant t) {
+        return t != null ? t.atOffset(ZoneOffset.UTC) : null;
+    }
+
+    private Instant instantOrNull(Record r, String column) {
+        Object o = r.get(column);
+        return o != null ? toInstant(o) : null;
     }
 
     private Instant toInstant(Object timeObj) {
