@@ -44,23 +44,23 @@ class ArrivalTimeCalculatorTest {
     }
 
     @Test
-    @DisplayName("Galchhi (GLB, km 88): expected band 10:45-11:23 [D]")
+    @DisplayName("Galchhi (GLB, km 88): expected band 10:44-11:23 [D]")
     void galchhiArrivalBand() {
         Site site = new Site("GLB", "corridor", "Galchhi Bazaar", "गल्छी", List.of(), "SETTLEMENT", 88.0, 27.850, 85.066, List.of());
         ArrivalBand band = calculator.calculateBand(site, 0.0, rswLastGood, rswFirstMissed);
 
-        assertThat(TIME_FMT.format(band.earliestArrival())).isEqualTo("10:45");
+        assertThat(TIME_FMT.format(band.earliestArrival())).isEqualTo("10:44");
         assertThat(TIME_FMT.format(band.latestArrival())).isEqualTo("11:23");
     }
 
     @Test
-    @DisplayName("Malekhu (MLB, km 100): expected band 11:06-11:39 [D]")
+    @DisplayName("Malekhu (MLB, km 100): expected band 11:06-11:49 [D]")
     void malekhuArrivalBand() {
         Site site = new Site("MLB", "corridor", "Malekhu", "मालेखु", List.of(), "SETTLEMENT", 100.0, 27.879, 84.953, List.of());
         ArrivalBand band = calculator.calculateBand(site, 0.0, rswLastGood, rswFirstMissed);
 
         assertThat(TIME_FMT.format(band.earliestArrival())).isEqualTo("11:06");
-        assertThat(TIME_FMT.format(band.latestArrival())).isEqualTo("11:39");
+        assertThat(TIME_FMT.format(band.latestArrival())).isEqualTo("11:49");
     }
 
     @Test

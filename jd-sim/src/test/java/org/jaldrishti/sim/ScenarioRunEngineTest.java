@@ -139,4 +139,28 @@ class ScenarioRunEngineTest {
         assertThat(fieldReportUseCase.commands).hasSize(1);
         assertThat(fieldReportUseCase.commands.get(0).rawText()).contains("भोटेकोसी");
     }
+
+    @Test
+    @DisplayName("Operator manual speed override is preserved across engine ticks")
+    void manualSpeedOverrideIsPreservedAcrossTicks() {
+        engine.start("test-run", "aug26-as-happened", null);
+
+        clock.pause();
+        // At 08:40 NPT, the scenario speed profile specifies 2x
+        clock.setTime(Instant.parse("2026-08-26T02:55:00Z"));
+        engine.tick();
+        assertThat(clock.getSpeed()).isEqualTo(2.0);
+
+        // Operator fast-forwards to 60x
+        ManageSimulationUseCase.RunSnapshot snap = engine.setSpeed("test-run", 60.0);
+        assertThat(snap.speed()).isEqualTo(60.0);
+        assertThat(clock.getSpeed()).isEqualTo(60.0);
+
+        // Subsequent ticks must preserve operator's 60x speed, not overwrite with 2x
+        engine.tick();
+        assertThat(clock.getSpeed()).isEqualTo(60.0);
+
+        engine.tick();
+        assertThat(clock.getSpeed()).isEqualTo(60.0);
+    }
 }

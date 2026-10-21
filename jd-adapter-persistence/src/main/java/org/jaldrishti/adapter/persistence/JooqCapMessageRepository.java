@@ -2,6 +2,7 @@ package org.jaldrishti.adapter.persistence;
 
 import org.jaldrishti.application.port.out.CapMessageRepository;
 import org.jooq.DSLContext;
+import org.jooq.JSONB;
 import org.springframework.stereotype.Repository;
 
 import java.time.Instant;
@@ -25,6 +26,7 @@ public class JooqCapMessageRepository implements CapMessageRepository {
     @Override
     public void save(String identifier, UUID incidentId, String msgType, String status, String xml, Instant sentAt, String gatewayResponse) {
         OffsetDateTime sent = PersistenceUtils.toOffsetDateTime(sentAt);
+        JSONB gatewayJson = toJsonb(gatewayResponse);
 
         dsl.insertInto(table("cap_message"))
                 .columns(
@@ -43,14 +45,14 @@ public class JooqCapMessageRepository implements CapMessageRepository {
                         status,
                         xml,
                         sent,
-                        gatewayResponse
+                        gatewayJson
                 )
                 .onConflict(field("identifier"))
                 .doUpdate()
                 .set(field("msg_type"), msgType)
                 .set(field("status"), status)
                 .set(field("xml"), xml)
-                .set(field("gateway_response"), gatewayResponse)
+                .set(field("gateway_response"), gatewayJson)
                 .execute();
     }
 
@@ -61,5 +63,17 @@ public class JooqCapMessageRepository implements CapMessageRepository {
                 .where(field("incident_id").eq(incidentId))
                 .orderBy(field("sent_at").desc())
                 .fetchInto(String.class);
+    }
+
+    /** gateway_response is JSONB: pass JSON through as-is, quote anything else as a JSON string. */
+    private static JSONB toJsonb(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return null;
+        }
+        String t = raw.trim();
+        if (t.startsWith("{") || t.startsWith("[")) {
+            return JSONB.valueOf(t);
+        }
+        return JSONB.valueOf("\"" + t.replace("\\", "\\\\").replace("\"", "\\\"") + "\"");
     }
 }

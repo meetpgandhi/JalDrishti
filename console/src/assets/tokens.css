@@ -1,0 +1,116 @@
+/* JalDrishti design tokens. The ONLY file allowed to contain colour values or px font sizes.
+   One professional light theme: white panels on a cool grey page, a deep-navy brand bar,
+   and colour used only where it carries meaning.
+     danger = act now / overdue      watch = attention, not yet confirmed
+     ok     = normal / confirmed     info  = neutral information, sent, stood down
+     ai     = produced by Gemini     outage = explained gap, not a flood signal
+     accent = interactive (buttons, links, focus, the "now" line) */
+
+:root {
+  color-scheme: light;
+
+  /* Page and surfaces */
+  --bg: #eef2f7;
+  --surface-1: #ffffff;
+  --surface-2: #f6f8fb;
+  --surface-3: #e9eef5;
+  --border: #dbe2ea;
+  --border-strong: #c2ccd8;
+
+  /* Text */
+  --text: #0f1b2d;
+  --text-2: #43536a;
+  --text-3: #5b6b80;
+  --text-on-solid: #ffffff;
+
+  /* Brand bar (top bar only) */
+  --brand-bar: #0d2b4e;
+  --brand-bar-hover: #173b65;
+  --brand-bar-line: #2d4f78;
+  --brand-mark: #1e88e5;
+  --text-on-brand: #ffffff;
+  --text-on-brand-2: #b8c8dc;
+
+  /* Interactive */
+  --accent: #0b62c4;
+  --accent-solid: #0b62c4;
+  --accent-soft: #e6f0fc;
+  --focus-ring: #0b62c4;
+
+  /* Status families: text colour, soft background, border line */
+  --ok: #0e7a46;
+  --ok-soft: #e5f5ec;
+  --ok-line: #a5d9bc;
+
+  --watch: #8a5300;
+  --watch-soft: #fff4d9;
+  --watch-line: #efc463;
+  --watch-solid: #f2a900;
+  --text-on-watch: #1c1300;
+
+  --danger: #b3261e;
+  --danger-soft: #fdecea;
+  --danger-line: #f2b6b2;
+  --danger-solid: #c62828;
+
+  --info: #0b62c4;
+  --info-soft: #e6f0fc;
+  --info-line: #b3cff2;
+
+  --ai: #6a3cc4;
+  --ai-soft: #f2edfd;
+  --ai-line: #d2c1f5;
+
+  --outage: #5b6b80;
+  --outage-soft: #eef2f6;
+  --outage-line: #cad3de;
+
+  /* Simulation band stripes */
+  --sim-stripe-a: #f7f9fc;
+  --sim-stripe-b: #eef2f8;
+
+  /* Elevation: cards get a hairline shadow, overlays a real one */
+  --shadow-card: 0 1px 2px rgba(15, 27, 45, 0.06), 0 1px 3px rgba(15, 27, 45, 0.04);
+  --shadow-overlay: 0 16px 48px rgba(15, 27, 45, 0.18);
+  --scrim: rgba(15, 27, 45, 0.35);
+
+  /* Typography — rem, so presentation mode scales everything at once */
+  --font-ui: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-deva: 'Noto Sans Devanagari', 'Inter', sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', monospace;
+
+  --fs-xs: 0.75rem;     /* 12px — table headers, captions. Nothing smaller exists. */
+  --fs-sm: 0.8125rem;   /* 13px — secondary text */
+  --fs-md: 0.875rem;    /* 14px — body, table cells, buttons */
+  --fs-lg: 1rem;        /* 16px — panel titles */
+  --fs-xl: 1.25rem;     /* 20px — status headline */
+  --fs-2xl: 1.75rem;    /* 28px — gauge values, sim clock */
+  --fs-deva: 1.0625rem; /* 17px — Nepali/Hindi body text */
+
+  --lh-tight: 1.2;
+  --lh-normal: 1.45;
+  --lh-deva: 1.65;
+
+  /* Spacing (4px grid) */
+  --sp-1: 0.25rem;
+  --sp-2: 0.5rem;
+  --sp-3: 0.75rem;
+  --sp-4: 1rem;
+  --sp-5: 1.25rem;
+  --sp-6: 1.5rem;
+  --sp-8: 2rem;
+
+  --r-sm: 6px;
+  --r-md: 10px;
+  --r-pill: 999px;
+
+  --topbar-h: 3.5rem;
+  --simbar-h: 3rem;
+  --rail-w: 380px;
+  --sheet-w: 480px;
+}
+
+/* Presentation mode (projector): bigger type everywhere */
+html[data-presentation='on'] {
+  font-size: 18px;
+}

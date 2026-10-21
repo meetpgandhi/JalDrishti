@@ -1,90 +1,135 @@
-<template>
-  <div class="ack-container">
-    <div class="ack-card card">
-      <h1>Action Acknowledgement</h1>
-
-      <div v-if="loading" class="status-msg text-mono">Loading…</div>
-      <div v-else-if="error" class="status-msg error">{{ error }}</div>
-      <div v-else-if="done" class="status-msg success">
-        ✓ Acknowledged. Thank you.
-      </div>
-      <div v-else class="action-detail">
-        <p class="site-name">{{ action?.siteName }}</p>
-        <p class="action-text text-devanagari">{{ action?.text }}</p>
-        <p class="deadline text-mono">Deadline: {{ action?.deadline }}</p>
-        <button class="ack-btn" @click="submitAck">{{ action?.ackMeans ?? 'Confirm' }}</button>
-      </div>
-    </div>
-
-    <p class="expiry-note text-mono">Link expires 24 hours after issue.</p>
-  </div>
-</template>
-
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
+import { ref } from 'vue'
+import { useRoute, RouterLink } from 'vue-router'
+import { CircleCheck } from '@lucide/vue'
+import { api, endpoints, ApiError } from '@/lib/api'
+import UiPanel from '@/components/ui/UiPanel.vue'
+import UiButton from '@/components/ui/UiButton.vue'
+import UiEmptyState from '@/components/ui/UiEmptyState.vue'
 
-interface ActionDetail {
-  siteName: string
-  text: string
-  deadline: string
-  ackMeans: string
-}
+const props = defineProps<{
+  dispatchId: string
+}>()
 
-const props = defineProps<{ dispatchId: string }>()
 const route = useRoute()
 
-const loading = ref(true)
-const error = ref<string | null>(null)
-const done = ref(false)
-const action = ref<ActionDetail | null>(null)
+const isSubmitting = ref(false)
+const isSuccess = ref(false)
+const errorMessage = ref<string | null>(null)
 
-onMounted(async () => {
+async function handleAck() {
+  isSubmitting.value = true
+  errorMessage.value = null
   try {
-    // GET /api/v1/acks/:dispatchId — Sprint 2 wires real endpoint
-    // Signed link validated by the server (expires 24h per spec Section 9)
-    const sig = route.query.sig as string
-    const resp = await fetch(`/api/v1/acks/${props.dispatchId}?sig=${sig}`)
-    if (!resp.ok) throw new Error(resp.status === 410 ? 'This link has expired.' : 'Could not load action.')
-    action.value = await resp.json()
+    const token = String(route.query.token ?? '')
+    await api.post(endpoints.signedAck(props.dispatchId, token), {
+      via: 'WEB_ACK_LINK',
+    })
+    isSuccess.value = true
   } catch (e: unknown) {
-    error.value = e instanceof Error ? e.message : 'Unknown error'
+    if (e instanceof ApiError && e.status === 410) {
+      errorMessage.value = 'This link has expired.'
+    } else {
+      const msg = e instanceof Error ? e.message : String(e)
+      errorMessage.value = `Could not confirm: ${msg}`
+    }
   } finally {
-    loading.value = false
-  }
-})
-
-async function submitAck() {
-  try {
-    const sig = route.query.sig as string
-    await fetch(`/api/v1/acks/${props.dispatchId}?sig=${sig}`, { method: 'POST' })
-    done.value = true
-  } catch {
-    error.value = 'Failed to submit acknowledgement. Please try again.'
+    isSubmitting.value = false
   }
 }
 </script>
 
+<template>
+  <div class="ack-page">
+    <UiPanel title="Confirm your action" class="ack-panel">
+      <!-- Success state -->
+      <UiEmptyState
+        v-if="isSuccess"
+        :icon="CircleCheck"
+        title="Confirmed. Thank you."
+        body="Your action confirmation has been recorded."
+      />
+
+      <!-- Action confirmation form -->
+      <div v-else class="ack-content">
+        <p class="ack-text">
+          JalDrishti sent you an action. Tap below once you have done it.
+        </p>
+
+        <div v-if="errorMessage" class="ack-error">
+          <p>{{ errorMessage }}</p>
+        </div>
+
+        <UiButton
+          variant="primary"
+          block
+          :busy="isSubmitting"
+          @click="handleAck"
+        >
+          {{ errorMessage ? 'Try again' : 'I have done it' }}
+        </UiButton>
+      </div>
+
+      <template #footer>
+        <div class="ack-footer">
+          <RouterLink to="/phone" class="phone-link">
+            Open your duty inbox
+          </RouterLink>
+        </div>
+      </template>
+    </UiPanel>
+  </div>
+</template>
+
 <style scoped>
-.ack-container {
-  max-width: 390px;
-  margin: var(--space-8) auto;
-  padding: var(--space-4);
+.ack-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--sp-4);
+  background: var(--bg);
+  box-sizing: border-box;
 }
-.ack-card { text-align: center; }
-h1 { font-size: 18px; margin-bottom: var(--space-6); }
-.status-msg { padding: var(--space-4); }
-.status-msg.error   { color: var(--color-warning); }
-.status-msg.success { color: var(--color-ok); font-size: 18px; }
-.site-name  { font-weight: 600; font-size: 16px; margin-bottom: var(--space-3); }
-.action-text { margin-bottom: var(--space-3); line-height: 1.5; }
-.deadline   { color: var(--color-text-muted); font-size: 12px; margin-bottom: var(--space-4); }
-.ack-btn {
-  width: 100%; padding: var(--space-3);
-  background: var(--color-ok); color: #000;
-  border: none; border-radius: var(--radius-md);
-  font-weight: 600; cursor: pointer; font-family: var(--font-ui);
-  font-size: 15px;
+
+.ack-panel {
+  width: 100%;
+  max-width: 26rem;
+  margin: var(--sp-8) auto;
 }
-.expiry-note { text-align: center; color: var(--color-text-muted); font-size: 11px; margin-top: var(--space-3); }
+
+.ack-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  padding: var(--sp-2) 0;
+}
+
+.ack-text {
+  font-size: var(--fs-md);
+  color: var(--text-2);
+  line-height: var(--lh-normal);
+}
+
+.ack-error {
+  color: var(--danger);
+  font-size: var(--fs-sm);
+  background: var(--danger-soft);
+  border: 1px solid var(--danger-line);
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: var(--r-sm);
+  line-height: var(--lh-normal);
+}
+
+.ack-footer {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
+.phone-link {
+  font-size: var(--fs-sm);
+  color: var(--accent);
+  font-weight: 500;
+}
 </style>

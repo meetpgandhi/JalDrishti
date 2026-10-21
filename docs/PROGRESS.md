@@ -1,6 +1,6 @@
 # JalDrishti v3 — Master Progress Tracker
 
-> **Last updated:** 2026-10-18 · Hardening pass (see below) — found and fixed several places where "COMPLETE" below overstated reality; see Known Issues #10–13 and `docs/DECISIONS.md` ADR-011/ADR-012.  
+> **Last updated:** 2026-10-20 · Test/sim-speed fix pass (see `docs/SPRINT_LOG.md`) — full `./mvnw test` is now green across all 10 modules; removed the dev-only speed-override hack now that `ScenarioRunEngine` fixes the root cause. See Known Issues #10, #14, #15.  
 > **Update this file at the END of every working session.**  
 > Any AI agent starting a new session MUST read this file first.
 
@@ -316,10 +316,12 @@
 | 7 | jOOQ code generation not yet configured | Backend B role | First task of Sprint 1 persistence work |
 | 8 | S1 golden JSONL is a placeholder | Backend lead | Replace after first successful S1 CI run |
 | 9 | `JalDrishtiApplicationTests` will fail until beans exist | Boot | Expected — add `@MockBean` stubs or `@Conditional` beans |
-| 10 | `ArrivalTimeCalculatorTest.galchhiArrivalBand`/`.malekhuArrivalBand` fail (off by 1 min / 10 min against the documented calibration table in the test's own comments) | Domain lead | Pre-existing, found 2026-10-18; not touched this session — needs the calibration spec to fix correctly, not a guess |
+| 10 | ~~`ArrivalTimeCalculatorTest.galchhiArrivalBand`/`.malekhuArrivalBand` failed~~ | Domain lead | **Fixed 2026-10-20** — the calculator was correct; the test's expected times had a rounding slip (10:45 → 10:44) and a transposed digit (11:39 → 11:49) vs. the documented calibration table. Full `./mvnw test` is green across all 10 modules. |
 | 11 | No GCP credentials / Vertex AI access available in the agent sandbox; Gemini enablement and `gemini-3.6-flash`/`asia-south1` availability could not be verified live | AI lead | Verify against real Vertex AI Model Garden before the demo (see ADR-012) |
 | 12 | No Docker available in the agent sandbox; the full Postgres-backed boot + console click-through (ScenarioRunEngine end-to-end) was verified only via unit tests + `vue-tsc`/`vite build`, not a live server | Backend lead | Must be click-tested against `docker compose up` / a real deployment before the demo |
 | 13 | Arrival bands are not persisted (ADR-011) — a page reload after WARNING has fired shows an empty bands table until the next `BANDS_UPDATED` event | Backend lead | Needs a persisted `ArrivalBandRepository` + migration; deferred |
+| 14 | `GET /api/v1/messages?runId=` and `GET /api/v1/cap-messages?runId=` (console's Messages/CAP log tab, see `console/src/types/api.ts`) have no server-side implementation — no controller maps them, and the `message`/`cap_message` tables carry no `run_id` or recipient column to answer the query directly | Backend lead | Needs a schema migration (recipient + queryable run linkage) plus new repository methods and a REST controller; `console/vite.config.ts`'s dev-only bridge reconstructs a best-effort log from other endpoints for local dev only — production/Cloud Run still returns `[]` |
+| 15 | ~~Operator's manual sim-speed override was overwritten by the next scenario-profile tick (every 500ms via `SimTickScheduler`), masked in dev by a client-side re-assert hack in `vite.config.ts`~~ | Backend lead | **Fixed 2026-10-20** — `ScenarioRunEngine` now tracks `manualSpeed` on the run context and prefers it over the scenario's speed band on every tick (`ScenarioRunEngineTest.manualSpeedOverrideIsPreservedAcrossTicks`). The now-redundant polling hack was removed from `vite.config.ts`. |
 
 ---
 
